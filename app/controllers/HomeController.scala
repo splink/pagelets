@@ -14,15 +14,20 @@ import scala.concurrent.Future
 @Singleton
 class HomeController @Inject()(implicit mat: Materializer) extends Controller {
 
-  val tree = Tree(PageletId("root"),
-    Seq(
-      Tree(PageletId("first"), Seq(
-        Leaf(PageletId("pagelet1"), pagelet1 _),
-        Leaf(PageletId("pagelet2"), pagelet2 _)
+  case object Root extends PageletId
+  case object First extends PageletId
+  case object Pagelet1 extends PageletId
+  case object Pagelet2 extends PageletId
+
+  val tree = Tree(Root, Seq(
+      Tree(First, Seq(
+        Leaf(Pagelet1, pagelet1 _),
+        Leaf(Pagelet2, pagelet2 _)
       ))
     ))
 
-  def index = Action.async { implicit request =>
+  def index = PageletAction.async { implicit request =>
+    println(PageFactory.show(tree))
     PageFactory.create(tree, Arg("s", "Hello!")).map { result =>
       Ok(result.body)
     }.recover {
@@ -32,12 +37,13 @@ class HomeController @Inject()(implicit mat: Materializer) extends Controller {
     }
   }
 
-  def pagelet1: Action[AnyContent] = Action.async { request =>
+  def pagelet1 = PageletAction.async { implicit request =>
     Future.successful(Ok("ok"))
   }
 
-  def pagelet2(s: String): Action[AnyContent] = Action { request =>
+  def pagelet2(s: String) = PageletAction { implicit request =>
     Ok(s)
   }
+
 
 }

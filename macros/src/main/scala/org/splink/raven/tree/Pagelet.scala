@@ -1,9 +1,11 @@
 package org.splink.raven.tree
 
 import akka.stream.Materializer
-import play.api.mvc.{Request, Action, AnyContent}
+import play.api.Logger
+import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Random
 
 
 case object Html {
@@ -23,7 +25,7 @@ case class TypeException(msg: String) extends RuntimeException(msg)
 
 case class TypeError(msg: String)
 
-case class PageletId(id: String)
+trait PageletId
 
 case class Arg(name: String, value: Any)
 
@@ -66,7 +68,7 @@ case class Leaf[A](id: PageletId, private val f: FunctionInfo[A]) extends Pagele
 
   import Leaf._
 
-  def exec(args: Arg*)(implicit ec: ExecutionContext, r: Request[_], m: Materializer): Future[Html] =
+  def exec(args: Arg*)(implicit ec: ExecutionContext, r: PageletRequest[AnyContent], m: Materializer): Future[Html] =
     values(f, args: _*).fold(
       err => Future.failed(TypeException(s"$id ${err.msg}")), {
         case Nil =>
@@ -85,8 +87,49 @@ case class Leaf[A](id: PageletId, private val f: FunctionInfo[A]) extends Pagele
     )
 
 
-  implicit def transform(action: Action[AnyContent])(implicit ec: ExecutionContext, r: Request[_], m: Materializer): Future[Html] =
-    action(r).run().flatMap(_.body.consumeData).map(s => Html(s.utf8String))
+  private implicit def transform(action: Action[AnyContent])(implicit ec: ExecutionContext, r: PageletRequest[AnyContent], m: Materializer): Future[Html] =
+    action(r).flatMap { result =>
+      result.body.consumeData
+    }.map(s => Html(s.utf8String))
 }
 
+
+class PageletRequest[T](request: Request[T], val requestId: String, m: Map[String, Any] = Map.empty) extends WrappedRequest(request) {
+  def withPageletId(id: PageletId) = new PageletRequest[T](request, requestId, m + ("pageletId" -> id))
+
+  def pageletId = m.getOrElse("pageletId", "Root")
+}
+
+object PageletAction extends ActionBuilder[PageletRequest] {
+  override def invokeBlock[A](request: Request[A], block: PageletRequest[A] => Future[Result]): Future[Result] = {
+    implicit val ec = executionContext
+
+    val start = System.currentTimeMillis()
+
+    val (requestId, pageletId, eventualResult) = request match {
+      case r: PageletRequest[A] =>
+        Logger.info(s"${r.requestId} Invoke pagelet ${r.pageletId}")
+        (r.requestId, r.pageletId, block(r))
+      case r: Request[A] =>
+        val requestId = uniqueString
+        Logger.info(s"$requestId Invoke page ${r.uri}")
+        val pageletRequest = new PageletRequest[A](r, requestId)
+        (requestId, pageletRequest.pageletId, block(pageletRequest))
+    }
+
+    eventualResult.map { result =>
+      Logger.info(s"$requestId Finish pagelet $pageletId took ${System.currentTimeMillis() - start} ms")
+      result
+    }.recover {
+      case t: Throwable =>
+        Logger.error(s"Error in pagelet: $t")
+        throw t
+    }
+  }
+
+  val rnd = new Random()
+
+  def uniqueString = (0 to 5).map { _ => (rnd.nextInt(90 - 65) + 65).toChar }.mkString
+
+}
 
