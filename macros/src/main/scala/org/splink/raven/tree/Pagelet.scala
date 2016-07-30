@@ -5,10 +5,11 @@ import play.api.Logger
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Random
 
 
 case object Html {
+  def empty = Html("")
+
   def combine(htmls: Html*): Html = htmls.reduce((a, b) => Html(a.body + b.body))
 }
 
@@ -22,6 +23,8 @@ object Util {
 }
 
 case class TypeException(msg: String) extends RuntimeException(msg)
+
+case class NoFallbackDefinedException(id: PageletId) extends RuntimeException(s"Fallback not defined for ${id.toString}")
 
 case class TypeError(msg: String)
 
@@ -63,12 +66,22 @@ case object Leaf {
   }).getCanonicalName.replaceAll("\\$", "")
 }
 
-case class Leaf[A](id: PageletId, private val f: FunctionInfo[A]) extends Pagelet {
+case class Leaf[A, B](id: PageletId, private val f: FunctionInfo[A], private val fallback: Option[FunctionInfo[B]] = None) extends Pagelet {
   type R = Action[AnyContent]
+
+  def withFallback(fallback: FunctionInfo[B]) = Leaf(id, f, Some(fallback))
 
   import Leaf._
 
-  def exec(args: Arg*)(implicit ec: ExecutionContext, r: PageletRequest[AnyContent], m: Materializer): Future[Html] =
+  def run(args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[Html] =
+    execute(f, args)
+
+  def runFallback(args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[Html] =
+    fallback.map(execute(_, args)).getOrElse {
+      Future.failed(NoFallbackDefinedException(id))
+    }
+
+  private def execute(f: FunctionInfo[_], args: Seq[Arg])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[Html] =
     values(f, args: _*).fold(
       err => Future.failed(TypeException(s"$id ${err.msg}")), {
         case Nil =>
@@ -86,50 +99,31 @@ case class Leaf[A](id: PageletId, private val f: FunctionInfo[A]) extends Pagele
       }
     )
 
-
-  private implicit def transform(action: Action[AnyContent])(implicit ec: ExecutionContext, r: PageletRequest[AnyContent], m: Materializer): Future[Html] =
+  private implicit def transform(action: Action[AnyContent])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[Html] =
     action(r).flatMap { result =>
       result.body.consumeData
     }.map(s => Html(s.utf8String))
+
 }
 
 
-class PageletRequest[T](request: Request[T], val requestId: String, m: Map[String, Any] = Map.empty) extends WrappedRequest(request) {
-  def withPageletId(id: PageletId) = new PageletRequest[T](request, requestId, m + ("pageletId" -> id))
-
-  def pageletId = m.getOrElse("pageletId", "Root")
-}
+class PageletRequest[T](request: Request[T]) extends WrappedRequest(request)
 
 object PageletAction extends ActionBuilder[PageletRequest] {
   override def invokeBlock[A](request: Request[A], block: PageletRequest[A] => Future[Result]): Future[Result] = {
     implicit val ec = executionContext
 
-    val start = System.currentTimeMillis()
-
-    val (requestId, pageletId, eventualResult) = request match {
-      case r: PageletRequest[A] =>
-        Logger.info(s"${r.requestId} Invoke pagelet ${r.pageletId}")
-        (r.requestId, r.pageletId, block(r))
-      case r: Request[A] =>
-        val requestId = uniqueString
-        Logger.info(s"$requestId Invoke page ${r.uri}")
-        val pageletRequest = new PageletRequest[A](r, requestId)
-        (requestId, pageletRequest.pageletId, block(pageletRequest))
+    val eventualResult = request match {
+      case r: PageletRequest[A] => block(r)
+      case r: Request[A] => block(new PageletRequest[A](r))
     }
 
-    eventualResult.map { result =>
-      Logger.info(s"$requestId Finish pagelet $pageletId took ${System.currentTimeMillis() - start} ms")
-      result
-    }.recover {
+    eventualResult.recover {
       case t: Throwable =>
         Logger.error(s"Error in pagelet: $t")
         throw t
     }
   }
-
-  val rnd = new Random()
-
-  def uniqueString = (0 to 5).map { _ => (rnd.nextInt(90 - 65) + 65).toChar }.mkString
 
 }
 
