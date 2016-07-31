@@ -34,11 +34,31 @@ object PageFactory {
   def create(p: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[Html] = {
     val requestId = uniqueString
 
-    def run(l: Leaf[_, _]) = {
+    def rec(p: Pagelet): Future[Html] =
+      p match {
+        case Tree(id, children, combiner) =>
+          val start = System.currentTimeMillis()
+          Logger.info(s"$requestId Invoke pagelet ${p.id}")
+
+          Future.sequence(children.map(rec)).map(combiner).map { result =>
+            Logger.info(s"$requestId Finish pagelet ${p.id} took ${System.currentTimeMillis() - start}ms")
+            result
+          }
+
+        case l: Leaf[_, _] => new LeafExecutor(l, requestId).run(args)
+      }
+
+    rec(p)
+  }
+
+
+  private class LeafExecutor(l: Leaf[_, _], requestId: String) {
+
+    def run(args: Seq[Arg])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
 
       def execute(id: PageletId, isFallback: Boolean, f: Seq[Arg] => Future[Html], fallback: Seq[Arg] => Future[Html]) = {
         val startTime = System.currentTimeMillis()
-        val s = if(isFallback) " fallback" else ""
+        val s = if (isFallback) " fallback" else ""
         Logger.info(s"$requestId Invoke$s pagelet $id")
 
         Try {
@@ -62,24 +82,7 @@ object PageFactory {
             fallback = _ =>
               Future.successful(Html.empty)))
     }
-
-    def rec(p: Pagelet): Future[Html] =
-      p match {
-        case Tree(id, children, combiner) =>
-          val start = System.currentTimeMillis()
-          Logger.info(s"$requestId Invoke pagelet ${p.id}")
-
-          Future.sequence(children.map(rec)).map(combiner).map { result =>
-            Logger.info(s"$requestId Finish pagelet ${p.id} took ${System.currentTimeMillis() - start}ms")
-            result
-          }
-
-        case l: Leaf[_, _] => run(l)
-      }
-
-    rec(p)
   }
-
 
   val rnd = new Random()
 

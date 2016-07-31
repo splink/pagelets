@@ -1,7 +1,6 @@
 package org.splink.raven.tree
 
 import akka.stream.Materializer
-import play.api.Logger
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -106,24 +105,21 @@ case class Leaf[A, B](id: PageletId, private val f: FunctionInfo[A], private val
 
 }
 
+object PageletResult {
 
-class PageletRequest[T](request: Request[T]) extends WrappedRequest(request)
+  case class Javascript(src: String)
 
-object PageletAction extends ActionBuilder[PageletRequest] {
-  override def invokeBlock[A](request: Request[A], block: PageletRequest[A] => Future[Result]): Future[Result] = {
-    implicit val ec = executionContext
+  case class Css(src: String)
 
-    val eventualResult = request match {
-      case r: PageletRequest[A] => block(r)
-      case r: Request[A] => block(new PageletRequest[A](r))
-    }
+  implicit class ResultOps(result: Result) {
+    def withJavascript(js: Javascript*) = helper(js.map(_.src), "js")
 
-    eventualResult.recover {
-      case t: Throwable =>
-        Logger.error(s"Error in pagelet: $t")
-        throw t
-    }
+    def withCss(css: Css*) = helper(css.map(_.src), "css")
+
+    private def helper(elems: Seq[String], id: String) =
+      result.withHeaders(elems.zipWithIndex.map { case (elem, index) =>
+        s"$id-$index" -> elem
+      }: _*)
   }
 
 }
-

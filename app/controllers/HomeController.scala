@@ -5,6 +5,7 @@ import javax.inject._
 import akka.stream.Materializer
 import org.splink.raven.page.PageFactory
 import org.splink.raven.tree.FunctionMacros._
+import org.splink.raven.tree.PageletResult._
 import org.splink.raven.tree._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc._
@@ -17,18 +18,22 @@ class HomeController @Inject()(implicit mat: Materializer) extends Controller {
   //TODO tree manipulation
   //TODO assets
   //TODO cookies
+  //TODO template combiner
 
   case object Root extends PageletId
+
   case object First extends PageletId
+
   case object Pagelet1 extends PageletId
+
   case object Pagelet2 extends PageletId
 
   val tree = Tree(Root, Seq(
-      Tree(First, Seq(
-        Leaf(Pagelet1, pagelet1 _).withFallback(pagelet3 _),
-        Leaf(Pagelet2, pagelet2 _)
-      ))
+    Tree(First, Seq(
+      Leaf(Pagelet1, pagelet1 _).withFallback(fallbackPagelet _),
+      Leaf(Pagelet2, pagelet2 _)
     ))
+  ))
 
   def index = Action.async { implicit request =>
     println(PageFactory.show(tree))
@@ -42,7 +47,9 @@ class HomeController @Inject()(implicit mat: Materializer) extends Controller {
   }
 
   def pagelet1 = Action.async { implicit request =>
-    Future { throw new RuntimeException("Oh, an error!") }
+    Future {
+      throw new RuntimeException("Oh, an error!")
+    }
   }
 
   def pagelet2(s: String) = Action { implicit request =>
@@ -50,9 +57,10 @@ class HomeController @Inject()(implicit mat: Materializer) extends Controller {
     throw new RuntimeException("Ups")
   }
 
-  def pagelet3 = Action { implicit request =>
-    Ok("fallback!")
+  def fallbackPagelet = Action { implicit request =>
+    Ok("fallback!").withJavascript(Javascript("js")).withCss(Css("css"))
   }
+
 
 
 }
