@@ -31,10 +31,10 @@ object PageFactory {
     rec(p)
   }
 
-  def create(p: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[Html] = {
+  def create(p: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] = {
     val requestId = uniqueString
 
-    def rec(p: Pagelet): Future[Html] =
+    def rec(p: Pagelet): Future[PageletResult] =
       p match {
         case Tree(id, children, combiner) =>
           val start = System.currentTimeMillis()
@@ -56,7 +56,7 @@ object PageFactory {
 
     def run(args: Seq[Arg])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
 
-      def execute(id: PageletId, isFallback: Boolean, f: Seq[Arg] => Future[Html], fallback: Seq[Arg] => Future[Html]) = {
+      def execute(id: PageletId, isFallback: Boolean, f: Seq[Arg] => Future[PageletResult], fallback: Seq[Arg] => Future[PageletResult]) = {
         val startTime = System.currentTimeMillis()
         val s = if (isFallback) " fallback" else ""
         Logger.info(s"$requestId Invoke$s pagelet $id")
@@ -80,7 +80,7 @@ object PageFactory {
         fallback = _ =>
           execute(l.id, isFallback = true, l.runFallback,
             fallback = _ =>
-              Future.successful(Html.empty)))
+              Future.successful(PageletResult.empty)))
     }
   }
 

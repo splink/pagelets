@@ -1,18 +1,11 @@
 package org.splink.raven.tree
 
 import akka.stream.Materializer
-import play.api.mvc._
+import org.splink.raven.tree.PageletResult.{Css, Javascript}
+import play.api.http.{ContentTypeOf, ContentTypes, Writeable}
+import play.api.mvc.{Action, AnyContent, Request, Result, Codec}
 
 import scala.concurrent.{ExecutionContext, Future}
-
-
-case object Html {
-  def empty = Html("")
-
-  def combine(htmls: Html*): Html = htmls.reduce((a, b) => Html(a.body + b.body))
-}
-
-case class Html(body: String)
 
 object Util {
   def eitherSeq[A, B](e: Seq[Either[A, B]]) =
@@ -35,7 +28,7 @@ sealed trait Pagelet {
   def id: PageletId
 }
 
-case class Tree(id: PageletId, children: Seq[Pagelet], combine: Seq[Html] => Html = Html.combine) extends Pagelet
+case class Tree(id: PageletId, children: Seq[Pagelet], combine: Seq[PageletResult] => PageletResult = PageletResult.combine) extends Pagelet
 
 case object Leaf {
   protected def values[T](info: FunctionInfo[T], args: Arg*): Either[TypeError, Seq[Any]] = Util.eitherSeq {
@@ -65,22 +58,24 @@ case object Leaf {
   }).getCanonicalName.replaceAll("\\$", "")
 }
 
-case class Leaf[A, B](id: PageletId, private val f: FunctionInfo[A], private val fallback: Option[FunctionInfo[B]] = None) extends Pagelet {
+case class Leaf[A, B](id: PageletId,
+                      private val f: FunctionInfo[A],
+                      private val fallback: Option[FunctionInfo[B]] = None) extends Pagelet {
   type R = Action[AnyContent]
 
   def withFallback(fallback: FunctionInfo[B]) = Leaf(id, f, Some(fallback))
 
   import Leaf._
 
-  def run(args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[Html] =
+  def run(args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
     execute(f, args)
 
-  def runFallback(args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[Html] =
+  def runFallback(args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
     fallback.map(execute(_, args)).getOrElse {
       Future.failed(NoFallbackDefinedException(id))
     }
 
-  private def execute(f: FunctionInfo[_], args: Seq[Arg])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[Html] =
+  private def execute(f: FunctionInfo[_], args: Seq[Arg])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
     values(f, args: _*).fold(
       err => Future.failed(TypeException(s"$id ${err.msg}")), {
         case Nil =>
@@ -98,28 +93,60 @@ case class Leaf[A, B](id: PageletId, private val f: FunctionInfo[A], private val
       }
     )
 
-  private implicit def transform(action: Action[AnyContent])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[Html] =
-    action(r).flatMap { result =>
-      result.body.consumeData
-    }.map(s => Html(s.utf8String))
+  private implicit def transform(action: Action[AnyContent])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
+    action(r).map { result =>
 
+      def to[T](key: String, f: String => T) =
+        result.header.headers.get(key).map(_.split(",").map(f).toSet).getOrElse(Set.empty)
+
+      (result.body.consumeData, to(Javascript.name, Javascript.apply), to(Css.name, Css.apply))
+    }.flatMap { case (eventualByteString, js, css) =>
+      eventualByteString.map { byteString =>
+        PageletResult(byteString.utf8String, js, css)
+      }
+    }
 }
 
 object PageletResult {
 
+  case object Javascript {
+    val name: String = "js"
+  }
+
   case class Javascript(src: String)
+
+  case object Css {
+    val name: String = "css"
+  }
 
   case class Css(src: String)
 
-  implicit class ResultOps(result: Result) {
-    def withJavascript(js: Javascript*) = helper(js.map(_.src), "js")
+  val empty = PageletResult("")
 
-    def withCss(css: Css*) = helper(css.map(_.src), "css")
-
-    private def helper(elems: Seq[String], id: String) =
-      result.withHeaders(elems.zipWithIndex.map { case (elem, index) =>
-        s"$id-$index" -> elem
-      }: _*)
+  def combine(results: Seq[PageletResult]): PageletResult = results.reduce { (acc, next) =>
+    PageletResult(acc.body + next.body, acc.js ++ next.js, acc.css ++ next.css)
   }
 
+  def combineAssets(results: Seq[PageletResult]): (String) => PageletResult = {
+    val (js, css) = results.foldLeft(Set.empty[Javascript], Set.empty[Css]) { (acc, next) =>
+      (acc._1 ++ next.js, acc._2 ++ next.css)
+    }
+    PageletResult(_, js, css)
+  }
+
+  implicit class ResultOps(result: Result) {
+    def withJavascript(js: Javascript*) = helper(js.map(_.src), Javascript.name)
+
+    def withCss(css: Css*) = helper(css.map(_.src), Css.name)
+
+    private def helper(elems: Seq[String], id: String) =
+      result.withHeaders(s"$id" -> elems.mkString(","))
+  }
+
+  implicit val ct = ContentTypeOf[PageletResult](Some(ContentTypes.HTML))
+
+  implicit def writeableOf(implicit codec: Codec, ct: ContentTypeOf[PageletResult]): Writeable[PageletResult] =
+    Writeable(result => codec.encode(result.body.trim))
 }
+
+case class PageletResult(body: String, js: Set[Javascript] = Set.empty, css: Set[Css] = Set.empty)
