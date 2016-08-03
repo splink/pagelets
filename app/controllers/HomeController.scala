@@ -16,11 +16,8 @@ import scala.concurrent.Future
 @Singleton
 class HomeController @Inject()(implicit mat: Materializer) extends Controller {
 
-  //TODO combiner
-  //TODO tree manipulation
   //TODO assets
   //TODO cookies
-  //TODO template combiner
 
   case object Root extends PageletId
   case object First extends PageletId
@@ -31,8 +28,8 @@ class HomeController @Inject()(implicit mat: Materializer) extends Controller {
     Tree(First, Seq(
       Leaf(Pagelet1, pagelet1 _).withFallback(fallbackPagelet _),
       Leaf(Pagelet2, pagelet2 _)
-    ), results => combineTwirl(results)(views.html.test.apply)
-    )))
+    ), results => combine(results)(views.html.test.apply)
+    ))).without(Pagelet2)
 
   def index = Action.async { implicit request =>
     println(PageFactory.show(tree))

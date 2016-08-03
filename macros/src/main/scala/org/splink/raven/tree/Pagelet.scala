@@ -3,7 +3,7 @@ package org.splink.raven.tree
 import akka.stream.Materializer
 import org.splink.raven.tree.PageletResult.{Css, Javascript}
 import play.api.http.{ContentTypeOf, ContentTypes, Writeable}
-import play.api.mvc.{Action, AnyContent, Request, Result, Codec}
+import play.api.mvc.{Action, AnyContent, Request, Result, Codec, Results}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -28,7 +28,44 @@ sealed trait Pagelet {
   def id: PageletId
 }
 
-case class Tree(id: PageletId, children: Seq[Pagelet], combine: Seq[PageletResult] => PageletResult = PageletResult.combine) extends Pagelet
+case object Tree {
+  def combine(results: Seq[PageletResult]): PageletResult = results.foldLeft(PageletResult.empty) { (acc, next) =>
+    PageletResult(acc.body + next.body, acc.js ++ next.js, acc.css ++ next.css)
+  }
+}
+
+case class Tree(id: PageletId, children: Seq[Pagelet], combine: Seq[PageletResult] => PageletResult = Tree.combine) extends Pagelet {
+
+  def find(id: PageletId): Option[Pagelet] = {
+    def rec(p: Pagelet): Option[Pagelet] = p match {
+      case _ if p.id == id => Some(p)
+      case Tree(_, children_, _) => children_.flatMap(rec).headOption
+      case _ => None
+    }
+    rec(this)
+  }
+
+  def without(id: PageletId) = {
+    import org.splink.raven.tree.FunctionMacros._
+    def f = Action(Results.Ok)
+    swap(id, Leaf(id, f _))
+  }
+
+  def swap(id: PageletId, other: Pagelet): Tree = {
+    def rec(p: Pagelet): Pagelet = p match {
+      case b@Tree(_, childs, _) if childs.exists(_.id == id) =>
+        val idx = childs.indexWhere(_.id == id)
+        b.copy(children = childs.updated(idx, other))
+
+      case b@Tree(_, childs, _) =>
+        b.copy(children = childs.map(rec))
+
+      case leaf =>
+        leaf
+    }
+    rec(this).asInstanceOf[Tree]
+  }
+}
 
 case object Leaf {
   protected def values[T](info: FunctionInfo[T], args: Arg*): Either[TypeError, Seq[Any]] = Util.eitherSeq {
@@ -122,17 +159,6 @@ object PageletResult {
   case class Css(src: String)
 
   val empty = PageletResult("")
-
-  def combine(results: Seq[PageletResult]): PageletResult = results.reduce { (acc, next) =>
-    PageletResult(acc.body + next.body, acc.js ++ next.js, acc.css ++ next.css)
-  }
-
-  def combineAssets(results: Seq[PageletResult]): (String) => PageletResult = {
-    val (js, css) = results.foldLeft(Set.empty[Javascript], Set.empty[Css]) { (acc, next) =>
-      (acc._1 ++ next.js, acc._2 ++ next.css)
-    }
-    PageletResult(_, js, css)
-  }
 
   implicit class ResultOps(result: Result) {
     def withJavascript(js: Javascript*) = helper(js.map(_.src), Javascript.name)
