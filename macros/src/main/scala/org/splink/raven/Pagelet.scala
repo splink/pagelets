@@ -2,9 +2,8 @@ package org.splink.raven
 
 import akka.stream.Materializer
 import org.splink.raven.PageletResult.{Css, Javascript}
-import play.api.Logger
-import play.api.http.{ContentTypeOf, ContentTypes, Writeable}
-import play.api.mvc.{Action, AnyContent, Codec, Request, Result, Results}
+import play.api.http.{HeaderNames, ContentTypeOf, ContentTypes, Writeable}
+import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,21 +30,12 @@ sealed trait Pagelet {
 
 case object Tree {
   def combine(results: Seq[PageletResult]): PageletResult = results.foldLeft(PageletResult.empty) { (acc, next) =>
-    PageletResult(acc.body + next.body, acc.js ++ next.js, acc.css ++ next.css)
+    PageletResult(acc.body + next.body, acc.js ++ next.js, acc.css ++ next.css, acc.cookies ++ next.cookies)
   }
 }
 
 case class Tree(id: PageletId, children: Seq[Pagelet], combine: Seq[PageletResult] => PageletResult = Tree.combine) extends Pagelet {
   self =>
-
-  def find(id: PageletId): Option[Pagelet] = {
-    def rec(p: Pagelet): Option[Pagelet] = p match {
-      case pagelet if pagelet.id == id => Some(pagelet)
-      case Tree(_, childs, _) => childs.flatMap(rec).headOption
-      case _ => None
-    }
-    rec(this)
-  }
 
   def skip(id: PageletId) = {
     def f = Action(Results.Ok)
@@ -109,7 +99,7 @@ case class Leaf[A, B](id: PageletId,
                       private val fallback: Option[FunctionInfo[B]] = None) extends Pagelet {
   type R = Action[AnyContent]
 
-  def withFallback(fallback: FunctionInfo[B]) = Leaf(id, info, Some(fallback))
+  def withFallback(fallback: FunctionInfo[B]) = copy(fallback = Some(fallback))
 
   import Leaf._
 
@@ -157,10 +147,14 @@ case class Leaf[A, B](id: PageletId,
       def to[T](key: String, f: String => T) =
         result.header.headers.get(key).map(_.split(",").map(f).toSet).getOrElse(Set.empty)
 
-      (result.body.consumeData, to(Javascript.name, Javascript.apply), to(Css.name, Css.apply))
-    }.flatMap { case (eventualByteString, js, css) =>
+      val js = to(Javascript.name, Javascript.apply)
+      val css = to(Css.name, Css.apply)
+      val cookies = result.header.headers.get(HeaderNames.SET_COOKIE).map(Cookies.decodeSetCookieHeader).getOrElse(Seq.empty)
+
+      (result.body.consumeData, js, css, cookies)
+    }.flatMap { case (eventualByteString, js, css, cookies) =>
       eventualByteString.map { byteString =>
-        PageletResult(byteString.utf8String, js, css)
+        PageletResult(byteString.utf8String, js, css, cookies)
       }
     }
 }
@@ -196,4 +190,4 @@ object PageletResult {
     Writeable(result => codec.encode(result.body.trim))
 }
 
-case class PageletResult(body: String, js: Set[Javascript] = Set.empty, css: Set[Css] = Set.empty)
+case class PageletResult(body: String, js: Set[Javascript] = Set.empty, css: Set[Css] = Set.empty, cookies: Seq[Cookie] = Seq.empty)

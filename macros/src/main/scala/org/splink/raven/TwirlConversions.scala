@@ -2,6 +2,7 @@ package org.splink.raven
 
 import org.splink.raven.PageletResult._
 import play.api.Logger
+import play.api.mvc.Cookie
 import play.twirl.api.Html
 
 import scala.util.Try
@@ -15,10 +16,10 @@ object TwirlConversions {
   }
 
   private def combineAssets(results: Seq[PageletResult]): (String) => PageletResult = {
-    val (js, css) = results.foldLeft(Set.empty[Javascript], Set.empty[Css]) { (acc, next) =>
-      (acc._1 ++ next.js, acc._2 ++ next.css)
+    val (js, css, cookies) = results.foldLeft(Set.empty[Javascript], Set.empty[Css], Seq.empty[Cookie]) { (acc, next) =>
+      (acc._1 ++ next.js, acc._2 ++ next.css, acc._3 ++ next.cookies)
     }
-    PageletResult(_, js, css)
+    PageletResult(_, js, css, cookies)
   }
 
   implicit def adapt[A, B](f: A => B): Seq[A] => B =

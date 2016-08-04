@@ -17,7 +17,6 @@ import scala.concurrent.Future
 class HomeController @Inject()(implicit mat: Materializer) extends Controller {
 
   //TODO assets
-  //TODO cookies
 
   case object Root extends PageletId
   case object First extends PageletId
@@ -29,12 +28,15 @@ class HomeController @Inject()(implicit mat: Materializer) extends Controller {
       Leaf(Pagelet1, pagelet1 _).withFallback(fallbackPagelet _),
       Leaf(Pagelet2, pagelet2 _)
     ), results => combine(results)(views.html.test.apply)
-    ))).skip(Pagelet2).replace(Pagelet1, Leaf(Pagelet2, pagelet2 _)).replace(Root, Leaf(Pagelet1, newRoot _))
+    ))).
+    skip(Pagelet2).
+    replace(Pagelet1, Leaf(Pagelet2, pagelet2 _)).
+    replace(Root, Leaf(Pagelet1, newRoot _))
 
   def index = Action.async { implicit request =>
     println(PageFactory.show(tree))
     PageFactory.create(tree, Arg("s", "Hello!")).map { result =>
-      Ok(result)
+      Ok(result).withCookies(result.cookies: _*)
     }.recover {
       case t: TypeException =>
         println(s"error $t")
@@ -54,11 +56,11 @@ class HomeController @Inject()(implicit mat: Materializer) extends Controller {
   }
 
   def fallbackPagelet = Action { implicit request =>
-    Ok("fallback!").withJavascript(Javascript("js"), Javascript("more js")).withCss(Css("css"))
+    Ok("fallback!").withJavascript(Javascript("js"), Javascript("more js")).withCss(Css("css")).withCookies(Cookie("yo", "man"))
   }
 
   def newRoot = Action {
-    Ok("new root!")
+    Ok("new root!").withCookies(Cookie("yoRoot", "manRoot"))
   }
 
 }
