@@ -1,19 +1,13 @@
-package org.splink.raven.tree
+package org.splink.raven
 
 import scala.annotation.implicitNotFound
-import scala.reflect.macros._
 import scala.language.experimental.macros
+import scala.reflect.macros._
 
 case class FunctionInfo[T](fnc: T, types: List[(String, String)])
 trait Fnc[T]
 
 object FunctionMacros {
-  /*
-TODO applyParams (s: Seq[T] => T)
-  def applyParams[T](f: T, s: Seq[T])(implicit fnc: Fnc[T]): T = {
-    f.apply(s.head, s(1), s(2), s(3))
-  }
-  */
 
   implicit def materialize[T]: Fnc[T] = macro materializeImpl[T]
 

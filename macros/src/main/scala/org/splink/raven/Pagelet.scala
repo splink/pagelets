@@ -1,9 +1,10 @@
-package org.splink.raven.tree
+package org.splink.raven
 
 import akka.stream.Materializer
-import org.splink.raven.tree.PageletResult.{Css, Javascript}
+import org.splink.raven.PageletResult.{Css, Javascript}
+import play.api.Logger
 import play.api.http.{ContentTypeOf, ContentTypes, Writeable}
-import play.api.mvc.{Action, AnyContent, Request, Result, Codec, Results}
+import play.api.mvc.{Action, AnyContent, Codec, Request, Result, Results}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -35,23 +36,23 @@ case object Tree {
 }
 
 case class Tree(id: PageletId, children: Seq[Pagelet], combine: Seq[PageletResult] => PageletResult = Tree.combine) extends Pagelet {
+  self =>
 
   def find(id: PageletId): Option[Pagelet] = {
     def rec(p: Pagelet): Option[Pagelet] = p match {
-      case _ if p.id == id => Some(p)
-      case Tree(_, children_, _) => children_.flatMap(rec).headOption
+      case pagelet if pagelet.id == id => Some(pagelet)
+      case Tree(_, childs, _) => childs.flatMap(rec).headOption
       case _ => None
     }
     rec(this)
   }
 
-  def without(id: PageletId) = {
-    import org.splink.raven.tree.FunctionMacros._
+  def skip(id: PageletId) = {
     def f = Action(Results.Ok)
-    swap(id, Leaf(id, f _))
+    replace(id, Leaf(id, FunctionInfo(f _, Nil)))
   }
 
-  def swap(id: PageletId, other: Pagelet): Tree = {
+  def replace(id: PageletId, other: Pagelet): Tree = {
     def rec(p: Pagelet): Pagelet = p match {
       case b@Tree(_, childs, _) if childs.exists(_.id == id) =>
         val idx = childs.indexWhere(_.id == id)
@@ -60,15 +61,23 @@ case class Tree(id: PageletId, children: Seq[Pagelet], combine: Seq[PageletResul
       case b@Tree(_, childs, _) =>
         b.copy(children = childs.map(rec))
 
-      case leaf =>
-        leaf
+      case pagelet =>
+        pagelet
     }
-    rec(this).asInstanceOf[Tree]
+
+    if (id == self.id) {
+      other match {
+        case t: Tree => t
+        case l: Leaf[_, _] => Tree(id, Seq(l), combine)
+      }
+    } else {
+      rec(this).asInstanceOf[Tree]
+    }
   }
 }
 
 case object Leaf {
-  protected def values[T](info: FunctionInfo[T], args: Arg*): Either[TypeError, Seq[Any]] = Util.eitherSeq {
+  private def values[T](info: FunctionInfo[T], args: Arg*): Either[TypeError, Seq[Any]] = Util.eitherSeq {
     def predicate(name: String, typ: String, arg: Arg) =
       name == arg.name && typ == scalaClassNameFor(arg.value)
 
@@ -96,35 +105,47 @@ case object Leaf {
 }
 
 case class Leaf[A, B](id: PageletId,
-                      private val f: FunctionInfo[A],
+                      private val info: FunctionInfo[A],
                       private val fallback: Option[FunctionInfo[B]] = None) extends Pagelet {
   type R = Action[AnyContent]
 
-  def withFallback(fallback: FunctionInfo[B]) = Leaf(id, f, Some(fallback))
+  def withFallback(fallback: FunctionInfo[B]) = Leaf(id, info, Some(fallback))
 
   import Leaf._
 
   def run(args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
-    execute(f, args)
+    execute(info, args)
 
   def runFallback(args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
     fallback.map(execute(_, args)).getOrElse {
       Future.failed(NoFallbackDefinedException(id))
     }
 
-  private def execute(f: FunctionInfo[_], args: Seq[Arg])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
-    values(f, args: _*).fold(
+  private def execute(fi: FunctionInfo[_], args: Seq[Arg])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
+    values(fi, args: _*).fold(
       err => Future.failed(TypeException(s"$id ${err.msg}")), {
         case Nil =>
-          f.fnc.asInstanceOf[() => R]()
+          fi.fnc.asInstanceOf[() => R]()
         case a :: Nil =>
-          f.fnc.asInstanceOf[Any => R](a)
+          fi.fnc.asInstanceOf[Any => R](a)
         case a :: b :: Nil =>
-          f.fnc.asInstanceOf[(Any, Any) => R](a, b)
+          fi.fnc.asInstanceOf[(Any, Any) => R](a, b)
         case a :: b :: c :: Nil =>
-          f.fnc.asInstanceOf[(Any, Any, Any) => R](a, b, c)
+          fi.fnc.asInstanceOf[(Any, Any, Any) => R](a, b, c)
         case a :: b :: c :: d :: Nil =>
-          f.fnc.asInstanceOf[(Any, Any, Any, Any) => R](a, b, c, d)
+          fi.fnc.asInstanceOf[(Any, Any, Any, Any) => R](a, b, c, d)
+        case a :: b :: c :: d :: e :: Nil =>
+          fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any) => R](a, b, c, d, e)
+        case a :: b :: c :: d :: e :: f :: Nil =>
+          fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f)
+        case a :: b :: c :: d :: e :: f :: g :: Nil =>
+          fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f, g)
+        case a :: b :: c :: d :: e :: f :: g :: h :: Nil =>
+          fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f, g, h)
+        case a :: b :: c :: d :: e :: f :: g :: h :: i :: Nil =>
+          fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f, g, h, i)
+        case a :: b :: c :: d :: e :: f :: g :: h :: i :: j :: Nil =>
+          fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f, g, h, i, j)
         case xs =>
           throw new IllegalArgumentException(s"$id too many arguments: ${xs.size}")
       }

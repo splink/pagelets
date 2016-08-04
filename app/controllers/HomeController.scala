@@ -3,11 +3,11 @@ package controllers
 import javax.inject._
 
 import akka.stream.Materializer
+import org.splink.raven.FunctionMacros._
 import org.splink.raven.TwirlConversions._
-import org.splink.raven.page.PageFactory
-import org.splink.raven.tree.FunctionMacros._
-import org.splink.raven.tree.PageletResult._
-import org.splink.raven.tree._
+
+import org.splink.raven.PageletResult._
+import org.splink.raven._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc._
 
@@ -29,7 +29,7 @@ class HomeController @Inject()(implicit mat: Materializer) extends Controller {
       Leaf(Pagelet1, pagelet1 _).withFallback(fallbackPagelet _),
       Leaf(Pagelet2, pagelet2 _)
     ), results => combine(results)(views.html.test.apply)
-    ))).without(Pagelet2)
+    ))).skip(Pagelet2).replace(Pagelet1, Leaf(Pagelet2, pagelet2 _)).replace(Root, Leaf(Pagelet1, newRoot _))
 
   def index = Action.async { implicit request =>
     println(PageFactory.show(tree))
@@ -57,5 +57,8 @@ class HomeController @Inject()(implicit mat: Materializer) extends Controller {
     Ok("fallback!").withJavascript(Javascript("js"), Javascript("more js")).withCss(Css("css"))
   }
 
+  def newRoot = Action {
+    Ok("new root!")
+  }
 
 }

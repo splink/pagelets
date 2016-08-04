@@ -1,7 +1,6 @@
 package org.splink.raven
 
-import org.splink.raven.tree.PageletResult
-import org.splink.raven.tree.PageletResult._
+import org.splink.raven.PageletResult._
 import play.api.Logger
 import play.twirl.api.Html
 

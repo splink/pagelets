@@ -1,7 +1,6 @@
-package org.splink.raven.page
+package org.splink.raven
 
 import akka.stream.Materializer
-import org.splink.raven.tree._
 import play.api.Logger
 import play.api.mvc.{AnyContent, Request}
 
