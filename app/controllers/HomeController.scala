@@ -8,13 +8,14 @@ import org.splink.raven.TwirlConversions._
 
 import org.splink.raven.PageletResult._
 import org.splink.raven._
+import play.api.Environment
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc._
 
 import scala.concurrent.Future
 
 @Singleton
-class HomeController @Inject()(implicit mat: Materializer) extends Controller {
+class HomeController @Inject()(implicit m: Materializer, e: Environment) extends Controller {
 
   //TODO assets
 
@@ -28,14 +29,26 @@ class HomeController @Inject()(implicit mat: Materializer) extends Controller {
       Leaf(Pagelet1, pagelet1 _).withFallback(fallbackPagelet _),
       Leaf(Pagelet2, pagelet2 _)
     ), results => combine(results)(views.html.test.apply)
-    ))).
+    )))/*.
     skip(Pagelet2).
     replace(Pagelet1, Leaf(Pagelet2, pagelet2 _)).
     replace(Root, Leaf(Pagelet1, newRoot _))
+    */
+
+  def resourceFor(key: String) = Action {
+    Resources.contentFor(key).map { content =>
+      Ok(content.body).as(content.mimeType)
+    }.getOrElse {
+      BadRequest
+    }
+  }
 
   def index = Action.async { implicit request =>
     println(PageFactory.show(tree))
     PageFactory.create(tree, Arg("s", "Hello!")).map { result =>
+
+      println(Resources.update(result.js, result.css))
+
       Ok(result).withCookies(result.cookies: _*)
     }.recover {
       case t: TypeException =>
@@ -52,11 +65,13 @@ class HomeController @Inject()(implicit mat: Materializer) extends Controller {
 
   def pagelet2(s: String) = Action { implicit request =>
     Ok(s)
-    throw new RuntimeException("Ups")
+   throw new RuntimeException("Ups")
   }
 
   def fallbackPagelet = Action { implicit request =>
-    Ok("fallback!").withJavascript(Javascript("js"), Javascript("more js")).withCss(Css("css")).withCookies(Cookie("yo", "man"))
+    Ok("fallback!").
+      withJavascript(Javascript("hello.js"), Javascript("not found")).
+      withCss(Css("hello.css")).withCookies(Cookie("yo", "man"))
   }
 
   def newRoot = Action {

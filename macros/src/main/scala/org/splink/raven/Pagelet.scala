@@ -161,17 +161,21 @@ case class Leaf[A, B](id: PageletId,
 
 object PageletResult {
 
+  sealed trait Asset {
+    def src: String
+  }
+
   case object Javascript {
     val name: String = "js"
   }
 
-  case class Javascript(src: String)
+  case class Javascript(src: String) extends Asset
 
   case object Css {
     val name: String = "css"
   }
 
-  case class Css(src: String)
+  case class Css(src: String) extends Asset
 
   val empty = PageletResult("")
 

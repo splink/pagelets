@@ -35,3 +35,5 @@ libraryDependencies ++= Seq(
 
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 
+import UglifyKeys._
+pipelineStages in Assets := Seq(uglify)
