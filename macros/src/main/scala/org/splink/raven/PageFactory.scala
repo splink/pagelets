@@ -5,7 +5,7 @@ import play.api.Logger
 import play.api.mvc.{AnyContent, Request}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Random, Try}
+import scala.util.{Success, Failure, Random, Try}
 
 object PageFactory {
 
@@ -55,6 +55,8 @@ object PageFactory {
 
     def run(args: Seq[Arg])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
 
+      def message(t: Throwable) = if(Option(t.getMessage).isDefined) t.getMessage else ""
+
       def execute(id: PageletId, isFallback: Boolean, f: Seq[Arg] => Future[PageletResult], fallback: Seq[Arg] => Future[PageletResult]) = {
         val startTime = System.currentTimeMillis()
         val s = if (isFallback) " fallback" else ""
@@ -66,12 +68,14 @@ object PageFactory {
             result
           }.recoverWith {
             case t: Throwable =>
-              Logger.warn(s"$requestId Exception in async$s pagelet $id")
+              Logger.warn(s"$requestId Exception in async$s pagelet $id '${message(t)}'")
               fallback(args)
           }
-        }.getOrElse {
-          Logger.warn(s"$requestId Exception in main$s pagelet $id")
-          fallback(args)
+        } match {
+          case Failure(t) =>
+            Logger.warn(s"$requestId Exception in main$s pagelet $id '${message(t)}'")
+            fallback(args)
+          case Success(result) => result
         }
       }
 
