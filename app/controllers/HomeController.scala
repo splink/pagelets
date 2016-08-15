@@ -14,32 +14,53 @@ import play.api.mvc._
 
 import scala.concurrent.Future
 
+
+case object Root extends PageletId
+case object First extends PageletId
+case object Pagelet1 extends PageletId
+case object Pagelet2 extends PageletId
+
 @Singleton
 class HomeController @Inject()(implicit m: Materializer, e: Environment) extends Controller {
 
-  //TODO assets
-
-  case object Root extends PageletId
-  case object First extends PageletId
-  case object Pagelet1 extends PageletId
-  case object Pagelet2 extends PageletId
 
   val tree = Tree(Root, Seq(
     Tree(First, Seq(
       Leaf(Pagelet1, pagelet1 _).withFallback(fallbackPagelet _),
       Leaf(Pagelet2, pagelet2 _)
     ), results => combine(results)(views.html.test.apply)
-    )))/*.
-    skip(Pagelet2).
-    replace(Pagelet1, Leaf(Pagelet2, pagelet2 _)).
-    replace(Root, Leaf(Pagelet1, newRoot _))
-    */
+    )))
+  /*.
+      skip(Pagelet2).
+      replace(Pagelet1, Leaf(Pagelet2, pagelet2 _)).
+      replace(Root, Leaf(Pagelet1, newRoot _))
+      */
 
   def resourceFor(key: String) = Action {
     Resources.contentFor(key).map { content =>
-      Ok(content.body).as(content.mimeType)
+      Ok(content.body).as(content.mimeType.name)
     }.getOrElse {
       BadRequest
+    }
+  }
+
+  // problem: pagelet with args, pagelet assets
+  def pagelet(id: String) = Action.async { implicit request =>
+    tree.find(id).map { pagelet =>
+
+      PageFactory.create(pagelet).map { result =>
+        val hashes = Resources.update(result.js, result.css)
+
+        Ok(
+          views.html.pageletWrapper(id, hashes.js, hashes.css)(play.twirl.api.Html(result.body))
+        ).withCookies(result.cookies: _*)
+      }.recover {
+        case t: TypeException =>
+          println(s"error $t")
+          InternalServerError(s"Error: $t")
+      }
+    }.getOrElse {
+      Future.successful(BadRequest(s"Pagelet '$id' does not exist"))
     }
   }
 
@@ -65,7 +86,7 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
 
   def pagelet2(s: String) = Action { implicit request =>
     Ok(s)
-   throw new RuntimeException("Ups")
+    throw new RuntimeException("Ups")
   }
 
   def fallbackPagelet = Action { implicit request =>

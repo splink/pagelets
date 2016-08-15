@@ -64,6 +64,15 @@ case class Tree(id: PageletId, children: Seq[Pagelet], combine: Seq[PageletResul
       rec(this).asInstanceOf[Tree]
     }
   }
+
+  def find(id: String): Option[Pagelet] = {
+    def rec(p: Pagelet): Option[Pagelet] = p match {
+      case _ if p.id.toString == id => Some(p)
+      case Tree(_, children_, _) => children_.flatMap(rec).headOption
+      case _ => None
+    }
+    rec(this)
+  }
 }
 
 case object Leaf {
