@@ -44,20 +44,22 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
     }
   }
 
-  // problem: pagelet with args, pagelet assets
   def pagelet(id: String) = Action.async { implicit request =>
     tree.find(id).map { pagelet =>
+      val args = request.queryString.map { case (key, values) =>
+        Arg(key, values.head)
+      }.toSeq
 
-      PageFactory.create(pagelet).map { result =>
+      PageFactory.create(pagelet, args: _*).map { result =>
         val hashes = Resources.update(result.js, result.css)
 
         Ok(
           views.html.pageletWrapper(id, hashes.js, hashes.css)(play.twirl.api.Html(result.body))
         ).withCookies(result.cookies: _*)
       }.recover {
-        case t: TypeException =>
-          println(s"error $t")
-          InternalServerError(s"Error: $t")
+        case e: PageletException =>
+          println(s"error $e")
+          InternalServerError(s"Error: $e")
       }
     }.getOrElse {
       Future.successful(BadRequest(s"Pagelet '$id' does not exist"))
@@ -72,9 +74,9 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
 
       Ok(result).withCookies(result.cookies: _*)
     }.recover {
-      case t: TypeException =>
-        println(s"error $t")
-        InternalServerError(s"Error: $t")
+      case e: PageletException =>
+        println(s"error $e")
+        InternalServerError(s"Error: $e")
     }
   }
 

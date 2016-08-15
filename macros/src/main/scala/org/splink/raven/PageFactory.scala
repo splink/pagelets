@@ -30,7 +30,7 @@ object PageFactory {
     rec(p)
   }
 
-  def create(p: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] = {
+  def create(pagelet: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] = {
     val requestId = uniqueString
 
     def rec(p: Pagelet): Future[PageletResult] =
@@ -44,20 +44,22 @@ object PageFactory {
             result
           }
 
-        case l: Leaf[_, _] => new LeafExecutor(l, requestId).run(args)
+        case l: Leaf[_, _] =>
+          val isRoot = pagelet.id == l.id
+          new LeafExecutor(l, requestId, isRoot).run(args)
       }
 
-    rec(p)
+    rec(pagelet)
   }
 
 
-  private class LeafExecutor(l: Leaf[_, _], requestId: String) {
+  private class LeafExecutor(l: Leaf[_, _], requestId: String, isRoot: Boolean) {
 
     def run(args: Seq[Arg])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
 
       def message(t: Throwable) = if(Option(t.getMessage).isDefined) t.getMessage else ""
 
-      def execute(id: PageletId, isFallback: Boolean, f: Seq[Arg] => Future[PageletResult], fallback: Seq[Arg] => Future[PageletResult]) = {
+      def execute(id: PageletId, isFallback: Boolean, f: Seq[Arg] => Future[PageletResult], fallback: (Seq[Arg], Throwable) => Future[PageletResult]) = {
         val startTime = System.currentTimeMillis()
         val s = if (isFallback) " fallback" else ""
         Logger.info(s"$requestId Invoke$s pagelet $id")
@@ -69,21 +71,22 @@ object PageFactory {
           }.recoverWith {
             case t: Throwable =>
               Logger.warn(s"$requestId Exception in async$s pagelet $id '${message(t)}'")
-              fallback(args)
+              fallback(args, t)
           }
         } match {
           case Failure(t) =>
             Logger.warn(s"$requestId Exception in main$s pagelet $id '${message(t)}'")
-            fallback(args)
+            fallback(args, t)
           case Success(result) => result
         }
       }
 
       execute(l.id, isFallback = false, l.run,
-        fallback = _ =>
+        fallback = (args, t) =>
           execute(l.id, isFallback = true, l.runFallback,
-            fallback = _ =>
-              Future.successful(PageletResult.empty)))
+            fallback = (args, t) =>
+              if(isRoot) Future.failed(t) else Future.successful(PageletResult.empty)
+          ))
     }
   }
 

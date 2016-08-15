@@ -14,9 +14,11 @@ object Util {
     }
 }
 
-case class TypeException(msg: String) extends RuntimeException(msg)
+class PageletException(msg: String) extends RuntimeException(msg)
 
-case class NoFallbackDefinedException(id: PageletId) extends RuntimeException(s"Fallback not defined for ${id.toString}")
+case class TypeException(msg: String) extends PageletException(msg)
+
+case class NoFallbackDefinedException(id: PageletId) extends PageletException(s"Fallback not defined for ${id.toString}")
 
 case class TypeError(msg: String)
 
