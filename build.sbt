@@ -1,6 +1,16 @@
+import sbt.Keys._
+
 name := """raven"""
 
 version := "0.1-SNAPSHOT"
+
+scalacOptions ++= Seq(
+  "-unchecked",
+  "-deprecation",
+  "-feature",
+  "-language:implicitConversions",
+  "-language:higherKinds",
+  "-language:existentials")
 
 lazy val commonSettings = Seq(
   scalaVersion := "2.11.8"

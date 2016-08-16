@@ -3,8 +3,13 @@
 # ~~~~
 
 # An example controller showing a sample home page
-GET     /                           controllers.HomeController.index
-GET     /pagelet/:id                controllers.HomeController.pagelet(id: String)
-GET     /resource/:key              controllers.HomeController.resourceFor(key: String)
+GET        /                               controllers.HomeController.index
+GET        /pagelet/:id                    controllers.HomeController.pagelet(id: String)
+GET        /resource/:fingerprint          controllers.HomeController.resourceFor(fingerprint: String)
+
+GET        /2                              controllers.HomeController2.index
+GET        /2/pagelet/:id                  controllers.HomeController2.pagelet(id: String)
+GET        /2/resource/:fingerprint        controllers.HomeController2.resourceFor(fingerprint: String)
+
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+GET        /assets/*file                   controllers.Assets.versioned(path="/public", file: Asset)

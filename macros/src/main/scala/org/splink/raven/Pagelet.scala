@@ -7,7 +7,7 @@ import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object Util {
+private object Util {
   def eitherSeq[A, B](e: Seq[Either[A, B]]) =
     e.foldRight(Right(Seq.empty): Either[A, Seq[B]]) {
       (e, acc) => for (xs <- acc.right; x <- e.right) yield xs.+:(x)
@@ -18,9 +18,9 @@ class PageletException(msg: String) extends RuntimeException(msg)
 
 case class TypeException(msg: String) extends PageletException(msg)
 
-case class NoFallbackDefinedException(id: PageletId) extends PageletException(s"Fallback not defined for ${id.toString}")
+case class NoFallbackException(id: PageletId) extends PageletException(s"Fallback not defined for ${id.toString}")
 
-case class TypeError(msg: String)
+case class ArgError(msg: String)
 
 trait PageletId
 
@@ -78,7 +78,7 @@ case class Tree(id: PageletId, children: Seq[Pagelet], combine: Seq[PageletResul
 }
 
 case object Leaf {
-  private def values[T](info: FunctionInfo[T], args: Arg*): Either[TypeError, Seq[Any]] = Util.eitherSeq {
+  private def values[T](info: FunctionInfo[T], args: Arg*): Either[ArgError, Seq[Any]] = Util.eitherSeq {
     def predicate(name: String, typ: String, arg: Arg) =
       name == arg.name && typ == scalaClassNameFor(arg.value)
 
@@ -87,7 +87,7 @@ case object Leaf {
         Right(p.value)
       }.getOrElse {
         val argsString = args.map(arg => s"${arg.name}:${scalaClassNameFor(arg.value)}").mkString(",")
-        Left(TypeError(s"'$name:$typ' not found in Arguments($argsString)"))
+        Left(ArgError(s"'$name:$typ' not found in Arguments($argsString)"))
       }
     }
   }
@@ -119,7 +119,7 @@ case class Leaf[A, B](id: PageletId,
 
   def runFallback(args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
     fallback.map(execute(_, args)).getOrElse {
-      Future.failed(NoFallbackDefinedException(id))
+      Future.failed(NoFallbackException(id))
     }
 
   private def execute(fi: FunctionInfo[_], args: Seq[Arg])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
@@ -172,7 +172,7 @@ case class Leaf[A, B](id: PageletId,
 
 object PageletResult {
 
-  sealed trait Asset {
+  sealed trait Resource {
     def src: String
   }
 
@@ -180,13 +180,13 @@ object PageletResult {
     val name: String = "js"
   }
 
-  case class Javascript(src: String) extends Asset
+  case class Javascript(src: String) extends Resource
 
   case object Css {
     val name: String = "css"
   }
 
-  case class Css(src: String) extends Asset
+  case class Css(src: String) extends Resource
 
   val empty = PageletResult("")
 
@@ -199,10 +199,14 @@ object PageletResult {
       result.withHeaders(s"$id" -> elems.mkString(","))
   }
 
-  implicit val ct = ContentTypeOf[PageletResult](Some(ContentTypes.HTML))
+  implicit val ct: ContentTypeOf[PageletResult] =
+    ContentTypeOf[PageletResult](Some(ContentTypes.HTML))
 
   implicit def writeableOf(implicit codec: Codec, ct: ContentTypeOf[PageletResult]): Writeable[PageletResult] =
     Writeable(result => codec.encode(result.body.trim))
 }
 
-case class PageletResult(body: String, js: Set[Javascript] = Set.empty, css: Set[Css] = Set.empty, cookies: Seq[Cookie] = Seq.empty)
+case class PageletResult(body: String,
+                         js: Set[Javascript] = Set.empty,
+                         css: Set[Css] = Set.empty,
+                         cookies: Seq[Cookie] = Seq.empty)

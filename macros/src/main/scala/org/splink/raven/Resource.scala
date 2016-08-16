@@ -1,19 +1,28 @@
 package org.splink.raven
 
 import org.apache.commons.codec.digest.DigestUtils
-import org.splink.raven.PageletResult.{Css, Javascript, Asset}
+import org.splink.raven.PageletResult.{Css, Javascript, Resource}
+import play.api.mvc.PathBindable
 import play.api.{Logger, Mode, Environment}
 
 import scala.io.Source
 
-object Resources {
+object Resource {
+  private val logger = Logger(Resource.getClass).logger
 
   private val NewLine = "\n"
   private val BasePath = "public/"
-  private var cache = Map[Key, Content]()
-  private var itemCache = Map[Key, Content]()
+  private var cache = Map[Fingerprint, Content]()
+  private var itemCache = Map[Fingerprint, Content]()
 
-  case class Key(s: String) {
+  case object Fingerprint {
+    implicit def pathBinder(implicit intBinder: PathBindable[Fingerprint]) = new PathBindable[Fingerprint] {
+      override def bind(key: String, value: String): Either[String, Fingerprint] = Right(Fingerprint(value))
+      override def unbind(key: String, user: Fingerprint): String = user.toString
+    }
+  }
+
+  case class Fingerprint(s: String) {
     override def toString = s
   }
 
@@ -27,37 +36,39 @@ object Resources {
     def +(that: Content) = copy(body = body + that.body, mimeType = that.mimeType)
   }
 
-  case class Hashes(js: String, css: String)
+  case class Fingerprints(js: Fingerprint, css: Fingerprint)
 
-  def contentFor(hash: String): Option[Content] = cache.get(Key(hash))
+  def contentFor(fingerprint: Fingerprint): Option[Content] = cache.get(fingerprint)
+
+  def contains(fingerprint: Fingerprint): Boolean = cache.contains(fingerprint)
 
   def update(js: Set[Javascript], css: Set[Css])(implicit e: Environment) = {
-    def hash(c: Content) = Key(DigestUtils.md5Hex(c.body))
-    def mk(assets: Seq[Asset]) = {
+    def fingerprint(c: Content) = Fingerprint(DigestUtils.md5Hex(c.body))
+    def mk(assets: Seq[Resource]) = {
       val content = assemble(assets)
-      val hashed = hash(content)
+      val hashed = fingerprint(content)
       cache = cache + (hashed -> content)
       hashed
     }
 
-    Hashes(mk(js.toSeq).toString, mk(css.toSeq).toString)
+    Fingerprints(mk(js.toSeq), mk(css.toSeq))
   }
 
-  private def assemble(assets: Seq[Asset])(implicit e: Environment) = synchronized {
+  private def assemble(assets: Seq[Resource])(implicit e: Environment) = synchronized {
     assets.foldLeft(Content.empty) { (acc, next) =>
       val maybeContent = for {
-        content <- itemCache.get(Key(next.src)) if e.mode == Mode.Prod
+        content <- itemCache.get(Fingerprint(next.src)) if e.mode == Mode.Prod
       } yield content
 
       maybeContent.map { content =>
         acc + content
       }.getOrElse {
         val text = e.resourceAsStream(BasePath + next.src).map(Source.fromInputStream(_).mkString).getOrElse {
-          Logger.warn(s"Missing ${mimeTypeFor(next)} resource: ${next.src}")
+          logger.warn(s"Missing ${mimeTypeFor(next)} resource: ${next.src}")
           ""
         }
         val content = Content(text + NewLine, mimeTypeFor(next))
-        itemCache = itemCache + (Key(next.src) -> content)
+        itemCache = itemCache + (Fingerprint(next.src) -> content)
         acc + content
       }
     }
@@ -79,7 +90,7 @@ object Resources {
     override def name = "text/javascript"
   }
 
-  private def mimeTypeFor(asset: Asset) = asset match {
+  private def mimeTypeFor(asset: Resource) = asset match {
     case a: Javascript => JsMimeType
     case a: Css => CssMimeType
   }

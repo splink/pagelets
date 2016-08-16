@@ -1,13 +1,16 @@
 package org.splink.raven
 
 import akka.stream.Materializer
-import play.api.Logger
 import play.api.mvc.{AnyContent, Request}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Success, Failure, Random, Try}
 
 object PageFactory {
+
+  import play.api.Logger
+  import scala.util.{Failure, Random, Success, Try}
+
+  private val logger = Logger(getClass).logger
 
   def show(p: Pagelet)(implicit r: Request[AnyContent]) = {
     def space(layer: Int) = (0 to layer).map(_ => "-").mkString
@@ -30,17 +33,17 @@ object PageFactory {
     rec(p)
   }
 
-  def create(pagelet: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] = {
+  def create(pagelet: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
     val requestId = uniqueString
 
     def rec(p: Pagelet): Future[PageletResult] =
       p match {
         case Tree(id, children, combiner) =>
           val start = System.currentTimeMillis()
-          Logger.info(s"$requestId Invoke pagelet ${p.id}")
+          logger.info(s"$requestId Invoke pagelet ${p.id}")
 
           Future.sequence(children.map(rec)).map(combiner).map { result =>
-            Logger.info(s"$requestId Finish pagelet ${p.id} took ${System.currentTimeMillis() - start}ms")
+            logger.info(s"$requestId Finish pagelet ${p.id} took ${System.currentTimeMillis() - start}ms")
             result
           }
 
@@ -57,25 +60,25 @@ object PageFactory {
 
     def run(args: Seq[Arg])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
 
-      def message(t: Throwable) = if(Option(t.getMessage).isDefined) t.getMessage else ""
+      def message(t: Throwable) = if (Option(t.getMessage).isDefined) t.getMessage else ""
 
       def execute(id: PageletId, isFallback: Boolean, f: Seq[Arg] => Future[PageletResult], fallback: (Seq[Arg], Throwable) => Future[PageletResult]) = {
         val startTime = System.currentTimeMillis()
         val s = if (isFallback) " fallback" else ""
-        Logger.info(s"$requestId Invoke$s pagelet $id")
+        logger.info(s"$requestId Invoke$s pagelet $id")
 
         Try {
           f(args).map { result =>
-            Logger.info(s"$requestId Finish$s pagelet $id took ${System.currentTimeMillis() - startTime}ms")
+            logger.info(s"$requestId Finish$s pagelet $id took ${System.currentTimeMillis() - startTime}ms")
             result
           }.recoverWith {
             case t: Throwable =>
-              Logger.warn(s"$requestId Exception in async$s pagelet $id '${message(t)}'")
+              logger.warn(s"$requestId Exception in async$s pagelet $id '${message(t)}'")
               fallback(args, t)
           }
         } match {
           case Failure(t) =>
-            Logger.warn(s"$requestId Exception in main$s pagelet $id '${message(t)}'")
+            logger.warn(s"$requestId Exception in main$s pagelet $id '${message(t)}'")
             fallback(args, t)
           case Success(result) => result
         }
@@ -85,7 +88,7 @@ object PageFactory {
         fallback = (args, t) =>
           execute(l.id, isFallback = true, l.runFallback,
             fallback = (args, t) =>
-              if(isRoot) Future.failed(t) else Future.successful(PageletResult.empty)
+              if (isRoot) Future.failed(t) else Future.successful(PageletResult.empty)
           ))
     }
   }

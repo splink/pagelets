@@ -11,13 +11,17 @@ import org.splink.raven._
 import play.api.Environment
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc._
+import play.twirl.api.Html
 
 import scala.concurrent.Future
 
 
 case object Root extends PageletId
+
 case object First extends PageletId
+
 case object Pagelet1 extends PageletId
+
 case object Pagelet2 extends PageletId
 
 @Singleton
@@ -27,7 +31,7 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
   val tree = Tree(Root, Seq(
     Tree(First, Seq(
       Leaf(Pagelet1, pagelet1 _).withFallback(fallbackPagelet _),
-      Leaf(Pagelet2, pagelet2 _)
+      Leaf(Pagelet2, pagelet2 _).withFallback(fallbackPagelet _)
     ), results => combine(results)(views.html.test.apply)
     )))
   /*.
@@ -36,13 +40,7 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
       replace(Root, Leaf(Pagelet1, newRoot _))
       */
 
-  def resourceFor(key: String) = Action {
-    Resources.contentFor(key).map { content =>
-      Ok(content.body).as(content.mimeType.name)
-    }.getOrElse {
-      BadRequest
-    }
-  }
+  def resourceFor(fingerprint: String) = HttpCaching.resourceFor(fingerprint)
 
   def pagelet(id: String) = Action.async { implicit request =>
     tree.find(id).map { pagelet =>
@@ -51,10 +49,12 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
       }.toSeq
 
       PageFactory.create(pagelet, args: _*).map { result =>
-        val hashes = Resources.update(result.js, result.css)
+        val fingerprints = Resource.update(result.js, result.css)
+        val js = routes.HomeController.resourceFor(fingerprints.js.toString)
+        val css = routes.HomeController.resourceFor(fingerprints.css.toString)
 
         Ok(
-          views.html.pageletWrapper(id, hashes.js, hashes.css)(play.twirl.api.Html(result.body))
+          views.html.pageletWrapper(id, js, css)(Html(result.body))
         ).withCookies(result.cookies: _*)
       }.recover {
         case e: PageletException =>
@@ -67,12 +67,15 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
   }
 
   def index = Action.async { implicit request =>
-    println(PageFactory.show(tree))
     PageFactory.create(tree, Arg("s", "Hello!")).map { result =>
 
-      println(Resources.update(result.js, result.css))
+      val hashes = Resource.update(result.js, result.css)
+      val js = routes.HomeController.resourceFor(hashes.js.toString)
+      val css = routes.HomeController.resourceFor(hashes.css.toString)
 
-      Ok(result).withCookies(result.cookies: _*)
+      Ok(
+        views.html.pageletWrapper("index", js, css)(Html(result.body))
+      ).withCookies(result.cookies: _*)
     }.recover {
       case e: PageletException =>
         println(s"error $e")
