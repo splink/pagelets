@@ -18,6 +18,7 @@ object Resource {
   case object Fingerprint {
     implicit def pathBinder(implicit intBinder: PathBindable[Fingerprint]) = new PathBindable[Fingerprint] {
       override def bind(key: String, value: String): Either[String, Fingerprint] = Right(Fingerprint(value))
+
       override def unbind(key: String, user: Fingerprint): String = user.toString
     }
   }
@@ -36,7 +37,7 @@ object Resource {
     def +(that: Content) = copy(body = body + that.body, mimeType = that.mimeType)
   }
 
-  case class Fingerprints(js: Fingerprint, css: Fingerprint)
+  case class Fingerprints(js: Option[Fingerprint], css: Option[Fingerprint])
 
   def contentFor(fingerprint: Fingerprint): Option[Content] = cache.get(fingerprint)
 
@@ -45,10 +46,12 @@ object Resource {
   def update(js: Set[Javascript], css: Set[Css])(implicit e: Environment) = {
     def fingerprint(c: Content) = Fingerprint(DigestUtils.md5Hex(c.body))
     def mk(assets: Seq[Resource]) = {
-      val content = assemble(assets)
-      val hashed = fingerprint(content)
-      cache = cache + (hashed -> content)
-      hashed
+      if (assets.nonEmpty) {
+        val content = assemble(assets)
+        val hash = fingerprint(content)
+        cache = cache + (hash -> content)
+        Some(hash)
+      } else None
     }
 
     Fingerprints(mk(js.toSeq), mk(css.toSeq))

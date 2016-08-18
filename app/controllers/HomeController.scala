@@ -40,7 +40,7 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
       replace(Root, Leaf(Pagelet1, newRoot _))
       */
 
-  def resourceFor(fingerprint: String) = HttpCaching.resourceFor(fingerprint)
+  def resourceFor(fingerprint: String) = ResourceAction(fingerprint)
 
   def pagelet(id: String) = Action.async { implicit request =>
     tree.find(id).map { pagelet =>

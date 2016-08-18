@@ -9,16 +9,16 @@ import play.api.mvc._
 
 import scala.concurrent.duration._
 
-object HttpCaching {
-  def resourceFor(fingerprint: String) = ResourceAction { implicit request =>
+object ResourceAction {
+  def apply(fingerprint: String, validFor: Duration = 365.days) = EtagAction { request =>
     Resource.contentFor(Fingerprint(fingerprint)).map { content =>
-      Ok(content.body).as(content.mimeType.name).withHeaders(CacheHeaders(fingerprint): _*)
+      Ok(content.body).as(content.mimeType.name).withHeaders(CacheHeaders(fingerprint, validFor): _*)
     }.getOrElse {
       BadRequest
     }
   }
 
-  private def ResourceAction(f: Request[AnyContent] => Result) = Action { implicit request =>
+  private def EtagAction(f: Request[AnyContent] => Result) = Action { request =>
     request.headers.get(IF_NONE_MATCH).map { etag =>
       if (Resource.contains(Fingerprint(etag))) NotModified else f(request)
     }.getOrElse {

@@ -122,7 +122,8 @@ case class Leaf[A, B](id: PageletId,
       Future.failed(NoFallbackException(id))
     }
 
-  private def execute(fi: FunctionInfo[_], args: Seq[Arg])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
+  private def execute(fi: FunctionInfo[_], args: Seq[Arg])(
+    implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
     values(fi, args: _*).fold(
       err => Future.failed(TypeException(s"$id ${err.msg}")), {
         case Nil =>
@@ -152,7 +153,8 @@ case class Leaf[A, B](id: PageletId,
       }
     )
 
-  private implicit def transform(action: Action[AnyContent])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
+  private implicit def transform(action: Action[AnyContent])(
+    implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
     action(r).map { result =>
 
       def to[T](key: String, f: String => T) =

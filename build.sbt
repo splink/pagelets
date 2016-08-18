@@ -21,6 +21,7 @@ lazy val root = (project in file(".")).
   dependsOn(macros).
   settings(commonSettings: _*).
   settings(
+    routesImport += "org.splink.raven.Resource.Fingerprint._",
     // include the macro classes and resources in the main jar
     mappings in (Compile, packageBin) ++= mappings.in(macros, Compile, packageBin).value,
     // include the macro sources in the main source jar
