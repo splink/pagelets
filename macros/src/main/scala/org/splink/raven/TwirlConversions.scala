@@ -1,6 +1,6 @@
 package org.splink.raven
 
-import org.splink.raven.PageletResult._
+import org.splink.raven.BrickResult._
 import play.api.Logger
 import play.api.mvc.Cookie
 import play.twirl.api.Html
@@ -8,18 +8,19 @@ import play.twirl.api.Html
 import scala.util.Try
 
 object TwirlConversions {
+  private val logger = Logger(getClass).logger
 
-  def combine(results: Seq[PageletResult])(template: Seq[Html] => Html) = {
+  def combine(results: Seq[BrickResult])(template: Seq[Html] => Html) = {
     val htmls = results.map(r => Html(r.body))
     val htmlString = template(htmls).body
     combineAssets(results)(htmlString)
   }
 
-  private def combineAssets(results: Seq[PageletResult]): (String) => PageletResult = {
+  private def combineAssets(results: Seq[BrickResult]): (String) => BrickResult = {
     val (js, css, cookies) = results.foldLeft(Set.empty[Javascript], Set.empty[Css], Seq.empty[Cookie]) { (acc, next) =>
       (acc._1 ++ next.js, acc._2 ++ next.css, acc._3 ++ next.cookies)
     }
-    PageletResult(_, js, css, cookies)
+    BrickResult(_, js, css, cookies)
   }
 
   implicit def adapt[A, B](f: A => B): Seq[A] => B =
@@ -54,7 +55,7 @@ object TwirlConversions {
     if (s.size < expectedSize)
       throw new RuntimeException(s"Not enough children beneath the tree: (${s.mkString(",")})")
     else if (s.size > expectedSize)
-      Logger.warn(s"Found too many children beneath the tree: (${s.mkString(",")})")
+      logger.warn(s"Found too many children beneath the tree: (${s.mkString(",")})")
 
     t.getOrElse(throw new RuntimeException("Error while rendering the template"))
   }

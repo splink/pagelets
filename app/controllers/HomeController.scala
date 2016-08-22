@@ -3,10 +3,11 @@ package controllers
 import javax.inject._
 
 import akka.stream.Materializer
+import org.splink.raven.Exceptions.PageletException
 import org.splink.raven.FunctionMacros._
 import org.splink.raven.TwirlConversions._
 
-import org.splink.raven.PageletResult._
+import org.splink.raven.BrickResult._
 import org.splink.raven._
 import play.api.Environment
 import play.api.libs.concurrent.Execution.Implicits._
@@ -43,6 +44,7 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
   def resourceFor(fingerprint: String) = ResourceAction(fingerprint)
 
   def pagelet(id: String) = Action.async { implicit request =>
+    import TreeImplicits._
     tree.find(id).map { pagelet =>
       val args = request.queryString.map { case (key, values) =>
         Arg(key, values.head)

@@ -4,7 +4,7 @@ import javax.inject._
 
 import akka.stream.Materializer
 import org.splink.raven.FunctionMacros._
-import org.splink.raven.PageletResult._
+import org.splink.raven.BrickResult._
 import org.splink.raven.TwirlConversions._
 import org.splink.raven._
 import play.api.Environment
@@ -38,7 +38,8 @@ class HomeController2 @Inject()(implicit m: Materializer, e: Environment) extend
       replace(Pagelet1, Leaf(Pagelet2, pagelet2 _)).
       replace(Root, Leaf(Pagelet1, newRoot _))
       */
-
+//TODO error template
+  //TODO withJavascriptTop
 
   val resourceRoute: String => Call = routes.HomeController2.resourceFor(_)
 

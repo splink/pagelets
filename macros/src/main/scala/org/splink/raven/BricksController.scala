@@ -1,6 +1,7 @@
 package org.splink.raven
 
 import akka.stream.Materializer
+import org.splink.raven.Exceptions.PageletException
 import play.api.mvc._
 import play.api.{Environment, Logger}
 import play.twirl.api.Html
@@ -25,7 +26,7 @@ trait BricksController {
 
   def RootPagelet(template: Page => Html, resourceRoute: String => Call)(
     title: String, pagelet: Pagelet, args: Arg*)(
-    implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
+                   implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
     PageFactory.create(pagelet, args: _*).map { result =>
       val fingerprints = Resource.update(result.js, result.css)
 
@@ -49,7 +50,8 @@ trait BricksController {
 
   def Pagelet(template: Page => Html, resourceRoute: String => Call)(
     tree: Tree, id: String)(
-    implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { request =>
+               implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { request =>
+    import TreeImplicits._
     tree.find(id).map { pagelet =>
       val args = request.queryString.map { case (key, values) =>
         Arg(key, values.head)

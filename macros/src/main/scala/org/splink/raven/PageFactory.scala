@@ -36,7 +36,7 @@ object PageFactory {
   def create(pagelet: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
     val requestId = uniqueString
 
-    def rec(p: Pagelet): Future[PageletResult] =
+    def rec(p: Pagelet): Future[BrickResult] =
       p match {
         case Tree(id, children, combiner) =>
           val start = System.currentTimeMillis()
@@ -57,12 +57,13 @@ object PageFactory {
 
 
   private class LeafExecutor(l: Leaf[_, _], requestId: String, isRoot: Boolean) {
+    import LeafImplicits._
 
     def run(args: Seq[Arg])(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
 
       def message(t: Throwable) = if (Option(t.getMessage).isDefined) t.getMessage else ""
 
-      def execute(id: PageletId, isFallback: Boolean, f: Seq[Arg] => Future[PageletResult], fallback: (Seq[Arg], Throwable) => Future[PageletResult]) = {
+      def execute(id: PageletId, isFallback: Boolean, f: Seq[Arg] => Future[BrickResult], fallback: (Seq[Arg], Throwable) => Future[BrickResult]) = {
         val startTime = System.currentTimeMillis()
         val s = if (isFallback) " fallback" else ""
         logger.info(s"$requestId Invoke$s pagelet $id")
@@ -88,7 +89,7 @@ object PageFactory {
         fallback = (args, t) =>
           execute(l.id, isFallback = true, l.runFallback,
             fallback = (args, t) =>
-              if (isRoot) Future.failed(t) else Future.successful(PageletResult.empty)
+              if (isRoot) Future.failed(t) else Future.successful(BrickResult.empty)
           ))
     }
   }

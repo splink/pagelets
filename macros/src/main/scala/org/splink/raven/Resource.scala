@@ -1,7 +1,7 @@
 package org.splink.raven
 
 import org.apache.commons.codec.digest.DigestUtils
-import org.splink.raven.PageletResult.{Css, Javascript, Resource}
+import org.splink.raven.BrickResult.{Css, Javascript, Resource}
 import play.api.mvc.PathBindable
 import play.api.{Logger, Mode, Environment}
 
