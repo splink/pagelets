@@ -2,28 +2,20 @@ package org.splink.raven
 
 import akka.stream.Materializer
 import org.splink.raven.BrickResult.{Css, Javascript}
-import org.splink.raven.Exceptions.{NoFallbackException, TypeException}
+import org.splink.raven.Exceptions.TypeException
 import play.api.http.HeaderNames
-import play.api.mvc.{Cookies, Request, AnyContent, Action}
+import play.api.mvc.{Action, AnyContent, Cookies, Request}
 
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.{ExecutionContext, Future}
 
-object LeafImplicits {
+object LeafTools {
 
   implicit class LeafOps(leaf: Leaf[_, _]) {
     type R = Action[AnyContent]
 
     private case class ArgError(msg: String)
 
-    def run(args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult] =
-      execute(leaf.info, args)
-
-    def runFallback(args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult] =
-      leaf.fallback.map(execute(_, args)).getOrElse {
-        Future.failed(NoFallbackException(leaf.id))
-      }
-
-    private def execute(fi: FunctionInfo[_], args: Seq[Arg])(
+    def execute(fi: FunctionInfo[_], args: Seq[Arg])(
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult] =
       values(fi, args: _*).fold(
         err => Future.failed(TypeException(s"$leaf.id ${err.msg}")), {

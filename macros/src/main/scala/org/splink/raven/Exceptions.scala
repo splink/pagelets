@@ -6,7 +6,7 @@ object Exceptions {
 
   case class TypeException(msg: String) extends PageletException(msg)
 
-  case class NoFallbackException(id: PageletId) extends PageletException(s"Fallback not defined for ${id.toString}")
+  case class NoFallbackException(id: Symbol) extends PageletException(s"Fallback not defined for $id")
 
 
 }

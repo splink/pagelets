@@ -16,41 +16,32 @@ import play.twirl.api.Html
 
 import scala.concurrent.Future
 
-
-case object Root extends PageletId
-
-case object First extends PageletId
-
-case object Pagelet1 extends PageletId
-
-case object Pagelet2 extends PageletId
-
 @Singleton
 class HomeController @Inject()(implicit m: Materializer, e: Environment) extends Controller {
 
+  import TreeTools._
 
-  val tree = Tree(Root, Seq(
-    Tree(First, Seq(
-      Leaf(Pagelet1, pagelet1 _).withFallback(fallbackPagelet _),
-      Leaf(Pagelet2, pagelet2 _).withFallback(fallbackPagelet _)
+  val plan = Tree('root, Seq(
+    Tree('first, Seq(
+      Leaf('brick1, pagelet1 _).withFallback(fallbackPagelet _),
+      Leaf('brick2, pagelet2 _).withFallback(fallbackPagelet _)
     ), results => combine(results)(views.html.test.apply)
-    )))
-  /*.
-      skip(Pagelet2).
-      replace(Pagelet1, Leaf(Pagelet2, pagelet2 _)).
-      replace(Root, Leaf(Pagelet1, newRoot _))
-      */
+    ))).skip('brick2).
+      replace('brick1, Leaf('brick2, pagelet2 _)).
+      replace('root, Leaf('brick1, newRoot _))
+
+  val builder = new LeafBuilderImpl
 
   def resourceFor(fingerprint: String) = ResourceAction(fingerprint)
 
   def pagelet(id: String) = Action.async { implicit request =>
-    import TreeImplicits._
-    tree.find(id).map { pagelet =>
+    import TreeTools._
+    plan.find(Symbol(id)).map { part =>
       val args = request.queryString.map { case (key, values) =>
         Arg(key, values.head)
       }.toSeq
 
-      PageFactory.create(pagelet, args: _*).map { result =>
+      Mason.build(builder)(part, args: _*).map { result =>
         val fingerprints = Resource.update(result.js, result.css)
         val js = routes.HomeController.resourceFor(fingerprints.js.toString)
         val css = routes.HomeController.resourceFor(fingerprints.css.toString)
@@ -69,7 +60,7 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
   }
 
   def index = Action.async { implicit request =>
-    PageFactory.create(tree, Arg("s", "Hello!")).map { result =>
+    Mason.build(builder)(plan, Arg("s", "Hello!")).map { result =>
 
       val hashes = Resource.update(result.js, result.css)
       val js = routes.HomeController.resourceFor(hashes.js.toString)

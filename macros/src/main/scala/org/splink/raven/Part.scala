@@ -1,16 +1,14 @@
 package org.splink.raven
 
-trait PageletId
-
 case class Arg(name: String, value: Any)
 
-sealed trait Pagelet {
-  def id: PageletId
+sealed trait Part {
+  def id: Symbol
 }
 
-case class Leaf[A, B](id: PageletId,
+case class Leaf[A, B](id: Symbol,
                       private[raven] val info: FunctionInfo[A],
-                      private[raven] val fallback: Option[FunctionInfo[B]] = None) extends Pagelet {
+                      private[raven] val fallback: Option[FunctionInfo[B]] = None) extends Part {
   def withFallback(fallback: FunctionInfo[B]) = copy(fallback = Some(fallback))
 }
 
@@ -20,4 +18,4 @@ object Tree {
   }
 }
 
-case class Tree(id: PageletId, children: Seq[Pagelet], combine: Seq[BrickResult] => BrickResult = Tree.combine) extends Pagelet
+case class Tree(id: Symbol, children: Seq[Part], combine: Seq[BrickResult] => BrickResult = Tree.combine) extends Part

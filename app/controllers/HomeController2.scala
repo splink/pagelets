@@ -14,22 +14,13 @@ import views.html.wrapper
 
 import scala.concurrent.Future
 
-/*
-case object Root extends PageletId
-
-case object First extends PageletId
-
-case object Pagelet1 extends PageletId
-
-case object Pagelet2 extends PageletId
-*/
 @Singleton
 class HomeController2 @Inject()(implicit m: Materializer, e: Environment) extends Controller with BricksController {
 
-  val tree = Tree(Root, Seq(
-    Tree(First, Seq(
-      Leaf(Pagelet1, pagelet1 _).withFallback(fallbackPagelet _),
-      Leaf(Pagelet2, pagelet2 _)
+  val plan = Tree('root, Seq(
+    Tree('first, Seq(
+      Leaf('brick1, pagelet1 _).withFallback(fallbackPagelet _),
+      Leaf('brick2, pagelet2 _)
     ), results => combine(results)(views.html.test.apply)
     )))
 
@@ -43,9 +34,9 @@ class HomeController2 @Inject()(implicit m: Materializer, e: Environment) extend
 
   val resourceRoute: String => Call = routes.HomeController2.resourceFor(_)
 
-  def index = RootPagelet(wrapper.apply, resourceRoute)("Index", tree, Arg("s", "Hello!"))
+  def index = Wall(wrapper.apply, resourceRoute)("Index", plan, Arg("s", "Hello!"))
 
-  def pagelet(id: String) = Pagelet(wrapper.apply, resourceRoute)(tree, id)
+  def part(id: String) = WallPart(wrapper.apply, resourceRoute)(plan, id)
 
   def pagelet1 = Action.async { implicit request =>
     Future {

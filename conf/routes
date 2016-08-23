@@ -8,7 +8,7 @@ GET        /pagelet/:id                    controllers.HomeController.pagelet(id
 GET        /resource/:fingerprint          controllers.HomeController.resourceFor(fingerprint: String)
 
 GET        /2                              controllers.HomeController2.index
-GET        /2/pagelet/:id                  controllers.HomeController2.pagelet(id: String)
+GET        /2/part/:id                  controllers.HomeController2.part(id: String)
 GET        /2/resource/:fingerprint        controllers.HomeController2.resourceFor(fingerprint: String)
 
 # Map static resources from the /public folder to the /assets URL path

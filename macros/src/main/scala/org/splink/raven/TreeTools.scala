@@ -2,17 +2,17 @@ package org.splink.raven
 
 import play.api.mvc.{Action, Results}
 
-object TreeImplicits {
+object TreeTools {
 
   implicit class TreeOps(tree: Tree) {
 
-    def skip(id: PageletId) = {
+    def skip(id: Symbol) = {
       def f = Action(Results.Ok)
       replace(id, Leaf(id, FunctionInfo(f _, Nil)))
     }
 
-    def replace(id: PageletId, other: Pagelet): Tree = {
-      def rec(p: Pagelet): Pagelet = p match {
+    def replace(id: Symbol, other: Part): Tree = {
+      def rec(p: Part): Part = p match {
         case b@Tree(_, childs, _) if childs.exists(_.id == id) =>
           val idx = childs.indexWhere(_.id == id)
           b.copy(children = childs.updated(idx, other))
@@ -34,9 +34,9 @@ object TreeImplicits {
       }
     }
 
-    def find(id: String): Option[Pagelet] = {
-      def rec(p: Pagelet): Option[Pagelet] = p match {
-        case _ if p.id.toString == id => Some(p)
+    def find(id: Symbol): Option[Part] = {
+      def rec(p: Part): Option[Part] = p match {
+        case _ if p.id == id => Some(p)
         case Tree(_, children_, _) => children_.flatMap(rec).headOption
         case _ => None
       }
