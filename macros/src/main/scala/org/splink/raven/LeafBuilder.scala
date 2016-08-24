@@ -2,12 +2,11 @@ package org.splink.raven
 
 import akka.stream.Materializer
 import org.splink.raven.Exceptions.NoFallbackException
-import org.splink.raven.Mason._
 import play.api.Logger
 import play.api.mvc.{AnyContent, Request}
 
-import scala.concurrent.{Future, ExecutionContext}
-import scala.util.{Success, Failure, Try}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 
 trait LeafBuilder {
@@ -23,8 +22,8 @@ class LeafBuilderImpl extends LeafBuilder {
     implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
 
     def execute(id: Symbol, isFallback: Boolean,
-                f: Seq[Arg] => Future[BrickResult],
-                fallback: (Seq[Arg], Throwable) => Future[BrickResult]) = {
+                fnc: Seq[Arg] => Future[BrickResult],
+                fallbackFnc: (Seq[Arg], Throwable) => Future[BrickResult]) = {
 
       def messageFor(t: Throwable) = if (Option(t.getMessage).isDefined) t.getMessage else ""
 
@@ -33,18 +32,18 @@ class LeafBuilderImpl extends LeafBuilder {
       logger.info(s"$requestId Invoke$s pagelet $id")
 
       Try {
-        f(args).map { result =>
+        fnc(args).map { result =>
           logger.info(s"$requestId Finish$s pagelet $id took ${System.currentTimeMillis() - startTime}ms")
           result
         }.recoverWith {
           case t: Throwable =>
             logger.warn(s"$requestId Exception in async$s pagelet $id '${messageFor(t)}'")
-            fallback(args, t)
+            fallbackFnc(args, t)
         }
       } match {
         case Failure(t) =>
           logger.warn(s"$requestId Exception in main$s pagelet $id '${messageFor(t)}'")
-          fallback(args, t)
+          fallbackFnc(args, t)
         case Success(result) => result
       }
     }
@@ -57,9 +56,9 @@ class LeafBuilderImpl extends LeafBuilder {
     }
 
     execute(leaf.id, isFallback = false, build,
-      fallback = (args, t) =>
+      fallbackFnc = (args, t) =>
         execute(leaf.id, isFallback = true, buildFallback,
-          fallback = (args, t) =>
+          fallbackFnc = (args, t) =>
             if (isRoot) Future.failed(t) else Future.successful(BrickResult.empty)
         ))
   }

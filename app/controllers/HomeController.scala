@@ -30,18 +30,17 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
       replace('brick1, Leaf('brick2, pagelet2 _)).
       replace('root, Leaf('brick1, newRoot _))
 
-  val builder = new LeafBuilderImpl
+  val mason = new MasonImpl(new LeafBuilderImpl)
 
   def resourceFor(fingerprint: String) = ResourceAction(fingerprint)
 
   def pagelet(id: String) = Action.async { implicit request =>
-    import TreeTools._
     plan.find(Symbol(id)).map { part =>
       val args = request.queryString.map { case (key, values) =>
         Arg(key, values.head)
       }.toSeq
 
-      Mason.build(builder)(part, args: _*).map { result =>
+      mason.build(part, args: _*).map { result =>
         val fingerprints = Resource.update(result.js, result.css)
         val js = routes.HomeController.resourceFor(fingerprints.js.toString)
         val css = routes.HomeController.resourceFor(fingerprints.css.toString)
@@ -60,7 +59,7 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
   }
 
   def index = Action.async { implicit request =>
-    Mason.build(builder)(plan, Arg("s", "Hello!")).map { result =>
+    mason.build(plan, Arg("s", "Hello!")).map { result =>
 
       val hashes = Resource.update(result.js, result.css)
       val js = routes.HomeController.resourceFor(hashes.js.toString)

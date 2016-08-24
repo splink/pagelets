@@ -5,15 +5,18 @@ import play.api.mvc.{AnyContent, Request}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object Mason {
+trait Mason {
+  def visualize(p: Part): String
 
+  def build(pagelet: Part, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult]
+}
+
+class MasonImpl(builder: LeafBuilder) extends Mason {
   import play.api.Logger
-
-  import scala.util.Random
 
   private val logger = Logger(getClass).logger
 
-  def show(p: Part) = {
+  override def visualize(p: Part) = {
     def space(layer: Int) = (0 to layer).map(_ => "-").mkString
 
     def mkArgsString(fnc: FunctionInfo[_]) =
@@ -34,8 +37,9 @@ object Mason {
     rec(p)
   }
 
-  def build(builder: LeafBuilder)(pagelet: Part, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
-    val requestId = mkRequestId
+  override def build(pagelet: Part, args: Arg*)(
+    implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
+    val requestId = RequestId.mkRequestId
 
     def rec(p: Part): Future[BrickResult] =
       p match {
@@ -55,13 +59,16 @@ object Mason {
 
     rec(pagelet)
   }
+}
 
+object RequestId {
+  private val rnd = new scala.util.Random()
 
-  case class RequestId(id: String) {
-    override def toString = id
-  }
+  def mkRequestId = RequestId((0 to 6).map { _ =>
+    (rnd.nextInt(90 - 65) + 65).toChar
+  }.mkString)
+}
 
-  val rnd = new Random()
-
-  def mkRequestId = RequestId((0 to 6).map { _ => (rnd.nextInt(90 - 65) + 65).toChar }.mkString)
+case class RequestId(id: String) {
+  override def toString = id
 }

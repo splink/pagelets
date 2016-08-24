@@ -8,40 +8,40 @@ import play.twirl.api.Html
 
 import scala.concurrent.{ExecutionContext, Future}
 
+case class Head(title: String,
+                meta: Option[Html] = None,
+                js: Option[Html] = None,
+                css: Option[Html] = None)
+
+case class Page(language: String,
+                head: Head,
+                body: Html,
+                js: Option[Html] = None)
+
 trait BricksController extends Controller {
-
-  case class Head(title: String,
-                  meta: Option[Html] = None,
-                  js: Option[Html] = None,
-                  css: Option[Html] = None)
-
-  case class Page(language: String,
-                  head: Head,
-                  body: Html,
-                  js: Option[Html] = None)
-
   val logger = Logger(getClass).logger
-  val builder = new LeafBuilderImpl
+  val mason = new MasonImpl(new LeafBuilderImpl)
 
   def resourceFor(fingerprint: String) = ResourceAction(fingerprint)
 
+  def mkPage(title: String, result: BrickResult, resourceRoute: String => Call)(implicit r: RequestHeader, env: Environment) = {
+    val fingerprints = Resource.update(result.js, result.css)
+
+    val script = fingerprints.js.map { f =>
+      Html(s"<script src='${resourceRoute(f.toString).url}'></script>")
+    }
+
+    val style = fingerprints.css.map { f =>
+      Html(s"<link rel='stylesheet' media='screen' href='${resourceRoute(f.toString).url}'>")
+    }
+
+    Page(request2lang.language, Head(title, script, style), Html(result.body))
+  }
+
   def Wall(template: Page => Html, resourceRoute: String => Call)(title: String, plan: Part, args: Arg*)(
                    implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
-    println(Mason.show(plan))
-    Mason.build(builder)(plan, args: _*).map { result =>
-      val fingerprints = Resource.update(result.js, result.css)
-
-      val script = fingerprints.js.map { f =>
-        Html(s"<script src='${resourceRoute(f.toString).url}'></script>")
-      }
-
-      val style = fingerprints.css.map { f =>
-        Html(s"<link rel='stylesheet' media='screen' href='${resourceRoute(f.toString).url}'>")
-      }
-
-      Ok(
-        template(Page(request2lang.language, Head(title, script, style), Html(result.body)))
-      ).withCookies(result.cookies: _*)
+    mason.build(plan, args: _*).map { result =>
+      Ok(template(mkPage(title, result, resourceRoute))).withCookies(result.cookies: _*)
     }.recover {
       case e: PageletException =>
         logger.error(s"error $e")
