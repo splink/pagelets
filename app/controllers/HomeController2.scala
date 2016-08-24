@@ -10,6 +10,7 @@ import org.splink.raven._
 import play.api.Environment
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc._
+import play.twirl.api.{HtmlFormat, Html}
 import views.html.wrapper
 
 import scala.concurrent.Future
@@ -20,7 +21,10 @@ class HomeController2 @Inject()(implicit m: Materializer, e: Environment) extend
   val plan = Tree('root, Seq(
     Tree('first, Seq(
       Leaf('brick1, pagelet1 _).withFallback(fallbackPagelet _),
-      Leaf('brick2, pagelet2 _)
+      Tree('sub, Seq(
+        Leaf('brick2, pagelet2 _),
+        Leaf('more, more _)
+      ))
     ), results => combine(results)(views.html.test.apply)
     )))
 
@@ -32,11 +36,11 @@ class HomeController2 @Inject()(implicit m: Materializer, e: Environment) extend
 //TODO error template
   //TODO withJavascriptTop
 
-  val resourceRoute: String => Call = routes.HomeController2.resourceFor(_)
+  val template = wrapper(routes.HomeController2.resourceFor) _
 
-  def index = Wall(wrapper.apply, resourceRoute)("Index", plan, Arg("s", "Hello!"))
+  def index = Wall(template)("Index", plan, Arg("s", "Hello!"))
 
-  def part(id: String) = WallPart(wrapper.apply, resourceRoute)(plan, id)
+  def part(id: String) = WallPart(template)(plan, id)
 
   def pagelet1 = Action.async { implicit request =>
     Future {
@@ -50,9 +54,17 @@ class HomeController2 @Inject()(implicit m: Materializer, e: Environment) extend
   }
 
   def fallbackPagelet = Action { implicit request =>
-    Ok("fallback!").
+    Ok("<b>fallback!</b>").
       withJavascript(Javascript("hello.js"), Javascript("not found")).
-      withCss(Css("hello.css")).withCookies(Cookie("yo", "man2"))
+      withCss(Css("hello.css")).
+      withCookies(Cookie("yo", "man2")).
+      withMetaTags(MetaTag("one", "oneContent"), MetaTag("two", "twoContent"))
+  }
+
+  def more = Action { implicit request =>
+    Ok(views.html.simple("more...")).
+      withCss(Css("hello.css")).
+      withMetaTags(MetaTag("one", "oneContent"), MetaTag("three", "threeContent"))
   }
 
   def newRoot = Action {

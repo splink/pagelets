@@ -1,22 +1,24 @@
 package org.splink.raven
 
 import akka.stream.Materializer
+import org.splink.raven.BrickResult.MetaTag
 import org.splink.raven.Exceptions.PageletException
+import org.splink.raven.Resource.Fingerprint
+import play.api.http.Writeable
 import play.api.mvc._
 import play.api.{Environment, Logger}
-import play.twirl.api.Html
 
 import scala.concurrent.{ExecutionContext, Future}
 
 case class Head(title: String,
-                meta: Option[Html] = None,
-                js: Option[Html] = None,
-                css: Option[Html] = None)
+                metaTags: Set[MetaTag] = Set.empty,
+                js: Option[Fingerprint] = None,
+                css: Option[Fingerprint] = None)
 
 case class Page(language: String,
                 head: Head,
-                body: Html,
-                js: Option[Html] = None)
+                body: String,
+                js: Option[Fingerprint] = None)
 
 trait BricksController extends Controller {
   val logger = Logger(getClass).logger
@@ -24,24 +26,18 @@ trait BricksController extends Controller {
 
   def resourceFor(fingerprint: String) = ResourceAction(fingerprint)
 
-  def mkPage(title: String, result: BrickResult, resourceRoute: String => Call)(implicit r: RequestHeader, env: Environment) = {
+  def mkPage(title: String, result: BrickResult)(implicit r: RequestHeader, env: Environment) = {
     val fingerprints = Resource.update(result.js, result.css)
 
-    val script = fingerprints.js.map { f =>
-      Html(s"<script src='${resourceRoute(f.toString).url}'></script>")
-    }
-
-    val style = fingerprints.css.map { f =>
-      Html(s"<link rel='stylesheet' media='screen' href='${resourceRoute(f.toString).url}'>")
-    }
-
-    Page(request2lang.language, Head(title, script, style), Html(result.body))
+    Page(request2lang.language,
+      Head(title, result.metaTags, fingerprints.js, fingerprints.css),
+      result.body)
   }
 
-  def Wall(template: Page => Html, resourceRoute: String => Call)(title: String, plan: Part, args: Arg*)(
+  def Wall[T: Writeable](template: Page => T)(title: String, plan: Part, args: Arg*)(
                    implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
     mason.build(plan, args: _*).map { result =>
-      Ok(template(mkPage(title, result, resourceRoute))).withCookies(result.cookies: _*)
+      Ok(template(mkPage(title, result))).withCookies(result.cookies: _*)
     }.recover {
       case e: PageletException =>
         logger.error(s"error $e")
@@ -49,7 +45,7 @@ trait BricksController extends Controller {
     }
   }
 
-  def WallPart(template: Page => Html, resourceRoute: String => Call)(plan: Tree, id: String)(
+  def WallPart[T: Writeable](template: Page => T)(plan: Tree, id: String)(
                implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { request =>
     import TreeTools._
 
@@ -58,7 +54,7 @@ trait BricksController extends Controller {
         Arg(key, values.head)
       }.toSeq
 
-      Wall(template, resourceRoute)(id, part, args: _*).apply(request)
+      Wall(template)(id, part, args: _*).apply(request)
     }.getOrElse {
       Future.successful(BadRequest(s"Pagelet '$id' does not exist"))
     }

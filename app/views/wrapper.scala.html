@@ -1,16 +1,28 @@
-@(page: org.splink.raven.Page)
+@(resourceRoute: String => Call)(page: org.splink.raven.Page)
 
 <!DOCTYPE html>
-<html lang="">
+<html lang="@page.language">
     <head>
         <title>@page.head.title</title>
         <link rel="shortcut icon" type="image/png" href="@routes.Assets.versioned("images/favicon.png")">
-        @page.head.meta
-        @page.head.css
-        @page.head.js
+
+        @page.head.metaTags.map { tag =>
+          <meta name="@tag.name" content="@tag.content" />
+        }
+
+        @page.head.css.map { css =>
+            <link rel='stylesheet' media='screen' href='@{resourceRoute(css.toString).url}'>
+        }
+
+        @page.head.js.map { js =>
+            <script src='@{resourceRoute(js.toString).url}'></script>
+        }
     </head>
     <body>
-        @page.body
-        @page.js
+        @Html(page.body)
+
+        @page.js.map { js =>
+            <script src='@{resourceRoute(js.toString).url}'></script>
+        }
     </body>
 </html>

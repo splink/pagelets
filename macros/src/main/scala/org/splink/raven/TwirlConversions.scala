@@ -17,10 +17,11 @@ object TwirlConversions {
   }
 
   private def combineAssets(results: Seq[BrickResult]): (String) => BrickResult = {
-    val (js, css, cookies) = results.foldLeft(Set.empty[Javascript], Set.empty[Css], Seq.empty[Cookie]) { (acc, next) =>
-      (acc._1 ++ next.js, acc._2 ++ next.css, acc._3 ++ next.cookies)
+    val (js, css, cookies, metaTags) = results.foldLeft(
+      Set.empty[Javascript], Set.empty[Css], Seq.empty[Cookie], Set.empty[MetaTag]) { (acc, next) =>
+      (acc._1 ++ next.js, acc._2 ++ next.css, acc._3 ++ next.cookies, acc._4 ++ next.metaTags)
     }
-    BrickResult(_, js, css, cookies)
+    BrickResult(_, js, css, cookies, metaTags)
   }
 
   implicit def adapt[A, B](f: A => B): Seq[A] => B =

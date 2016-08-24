@@ -14,7 +14,12 @@ case class Leaf[A, B](id: Symbol,
 
 object Tree {
   def combine(results: Seq[BrickResult]): BrickResult = results.foldLeft(BrickResult.empty) { (acc, next) =>
-    BrickResult(acc.body + next.body, acc.js ++ next.js, acc.css ++ next.css, acc.cookies ++ next.cookies)
+    BrickResult(
+      acc.body + next.body,
+      acc.js ++ next.js,
+      acc.css ++ next.css,
+      acc.cookies ++ next.cookies,
+      acc.metaTags ++ next.metaTags)
   }
 }
 
