@@ -37,13 +37,11 @@ object Resource {
     def +(that: Content) = copy(body = body + that.body, mimeType = that.mimeType)
   }
 
-  case class Fingerprints(js: Option[Fingerprint], css: Option[Fingerprint])
-
   def contentFor(fingerprint: Fingerprint): Option[Content] = cache.get(fingerprint)
 
   def contains(fingerprint: Fingerprint): Boolean = cache.contains(fingerprint)
 
-  def update(js: Set[Javascript], css: Set[Css])(implicit e: Environment) = {
+  def update[T <: Resource](r: Set[T])(implicit e: Environment) = {
     def fingerprint(c: Content) = Fingerprint(DigestUtils.md5Hex(c.body))
     def mk(assets: Seq[Resource]) = {
       if (assets.nonEmpty) {
@@ -54,7 +52,7 @@ object Resource {
       } else None
     }
 
-    Fingerprints(mk(js.toSeq), mk(css.toSeq))
+    mk(r.toSeq)
   }
 
   private def assemble(assets: Seq[Resource])(implicit e: Environment) = synchronized {

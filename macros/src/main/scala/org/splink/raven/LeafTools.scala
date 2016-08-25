@@ -1,7 +1,7 @@
 package org.splink.raven
 
 import akka.stream.Materializer
-import org.splink.raven.BrickResult.{MetaTag, Css, Javascript}
+import org.splink.raven.BrickResult.{Css, Javascript, MetaTag}
 import org.splink.raven.Exceptions.TypeException
 import play.api.http.HeaderNames
 import play.api.mvc.{Action, AnyContent, Cookies, Request}
@@ -56,14 +56,15 @@ object LeafTools {
           header(key).map(_.split(",").map(f).toSet).getOrElse(Set.empty)
 
         val js = to(Javascript.name, Javascript.apply)
+        val jsTop = to(Javascript.nameTop, Javascript.apply)
         val css = to(Css.name, Css.apply)
         val metaTags = header(MetaTag.name).map(_.split("\n").map(Serializer.deserialize[MetaTag]).toSet).getOrElse(Set.empty)
         val cookies = header(HeaderNames.SET_COOKIE).map(Cookies.decodeSetCookieHeader).getOrElse(Seq.empty)
 
-        (result.body.consumeData, js, css, cookies, metaTags)
-      }.flatMap { case (eventualByteString, js, css, cookies, metaTags) =>
+        (result.body.consumeData, js, jsTop, css, cookies, metaTags)
+      }.flatMap { case (eventualByteString, js, jsTop, css, cookies, metaTags) =>
         eventualByteString.map { byteString =>
-          BrickResult(byteString.utf8String, js, css, cookies, metaTags)
+          BrickResult(byteString.utf8String, js, jsTop, css, cookies, metaTags)
         }
       }
 

@@ -27,11 +27,14 @@ trait BricksController extends Controller {
   def resourceFor(fingerprint: String) = ResourceAction(fingerprint)
 
   def mkPage(title: String, result: BrickResult)(implicit r: RequestHeader, env: Environment) = {
-    val fingerprints = Resource.update(result.js, result.css)
+    val jsFinger = Resource.update(result.js)
+    val jsTopFinger = Resource.update(result.jsTop)
+    val cssFinger = Resource.update(result.css)
 
     Page(request2lang.language,
-      Head(title, result.metaTags, fingerprints.js, fingerprints.css),
-      result.body)
+      Head(title, result.metaTags, jsTopFinger, cssFinger),
+      result.body,
+      jsFinger)
   }
 
   def Wall[T: Writeable](template: Page => T)(title: String, plan: Part, args: Arg*)(
@@ -56,7 +59,7 @@ trait BricksController extends Controller {
 
       Wall(template)(id, part, args: _*).apply(request)
     }.getOrElse {
-      Future.successful(BadRequest(s"Pagelet '$id' does not exist"))
+      Future.successful(BadRequest(s"'$id' does not exist"))
     }
   }
 

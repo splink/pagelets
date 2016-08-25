@@ -12,6 +12,7 @@ object BrickResult {
 
   case object Javascript {
     val name: String = "js"
+    val nameTop: String = "jsTop"
   }
 
   case class Javascript(src: String) extends Resource
@@ -33,8 +34,11 @@ object BrickResult {
   implicit class ResultOps(result: Result) {
     def withJavascript(js: Javascript*) = helper(js.map(_.src), Javascript.name)
 
+    def withJavascriptTop(js: Javascript*) = helper(js.map(_.src), Javascript.nameTop)
+
     def withCss(css: Css*) = helper(css.map(_.src), Css.name)
 
+    //TODO is serialization the correct approach?
     def withMetaTags(tags: MetaTag*) =
       result.withHeaders(MetaTag.name -> tags.map(Serializer.serialize).mkString("\n"))
 
@@ -51,6 +55,7 @@ object BrickResult {
 
 case class BrickResult(body: String,
                        js: Set[Javascript] = Set.empty,
+                       jsTop: Set[Javascript] = Set.empty,
                        css: Set[Css] = Set.empty,
                        cookies: Seq[Cookie] = Seq.empty,
                        metaTags: Set[MetaTag] = Set.empty)

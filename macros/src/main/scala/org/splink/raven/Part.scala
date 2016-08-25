@@ -17,6 +17,7 @@ object Tree {
     BrickResult(
       acc.body + next.body,
       acc.js ++ next.js,
+      acc.jsTop ++ next.jsTop,
       acc.css ++ next.css,
       acc.cookies ++ next.cookies,
       acc.metaTags ++ next.metaTags)

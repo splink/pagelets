@@ -3,77 +3,42 @@ package controllers
 import javax.inject._
 
 import akka.stream.Materializer
-import org.splink.raven.Exceptions.PageletException
+import org.splink.raven.BrickResult._
 import org.splink.raven.FunctionMacros._
 import org.splink.raven.TwirlConversions._
-
-import org.splink.raven.BrickResult._
 import org.splink.raven._
 import play.api.Environment
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc._
-import play.twirl.api.Html
+import views.html.wrapper
 
 import scala.concurrent.Future
 
 @Singleton
-class HomeController @Inject()(implicit m: Materializer, e: Environment) extends Controller {
-
-  import TreeTools._
+class HomeController @Inject()(implicit m: Materializer, e: Environment) extends Controller with BricksController {
 
   val plan = Tree('root, Seq(
     Tree('first, Seq(
       Leaf('brick1, pagelet1 _).withFallback(fallbackPagelet _),
-      Leaf('brick2, pagelet2 _).withFallback(fallbackPagelet _)
+      Tree('sub, Seq(
+        Leaf('brick2, pagelet2 _),
+        Leaf('more, more _)
+      ))
     ), results => combine(results)(views.html.test.apply)
-    ))).skip('brick2).
-      replace('brick1, Leaf('brick2, pagelet2 _)).
-      replace('root, Leaf('brick1, newRoot _))
+    )))
 
-  val mason = new MasonImpl(new LeafBuilderImpl)
+  /*.
+      skip(Pagelet2).
+      replace(Pagelet1, Leaf(Pagelet2, pagelet2 _)).
+      replace(Root, Leaf(Pagelet1, newRoot _))
+      */
+  //TODO error template
 
-  def resourceFor(fingerprint: String) = ResourceAction(fingerprint)
+  val template = wrapper(routes.HomeController.resourceFor) _
 
-  def pagelet(id: String) = Action.async { implicit request =>
-    plan.find(Symbol(id)).map { part =>
-      val args = request.queryString.map { case (key, values) =>
-        Arg(key, values.head)
-      }.toSeq
+  def index = Wall(template)("Index", plan, Arg("s", "Hello!"))
 
-      mason.build(part, args: _*).map { result =>
-        val fingerprints = Resource.update(result.js, result.css)
-        val js = routes.HomeController.resourceFor(fingerprints.js.toString)
-        val css = routes.HomeController.resourceFor(fingerprints.css.toString)
-
-        Ok(
-          views.html.pageletWrapper(id, js, css)(Html(result.body))
-        ).withCookies(result.cookies: _*)
-      }.recover {
-        case e: PageletException =>
-          println(s"error $e")
-          InternalServerError(s"Error: $e")
-      }
-    }.getOrElse {
-      Future.successful(BadRequest(s"Pagelet '$id' does not exist"))
-    }
-  }
-
-  def index = Action.async { implicit request =>
-    mason.build(plan, Arg("s", "Hello!")).map { result =>
-
-      val hashes = Resource.update(result.js, result.css)
-      val js = routes.HomeController.resourceFor(hashes.js.toString)
-      val css = routes.HomeController.resourceFor(hashes.css.toString)
-
-      Ok(
-        views.html.pageletWrapper("index", js, css)(Html(result.body))
-      ).withCookies(result.cookies: _*)
-    }.recover {
-      case e: PageletException =>
-        println(s"error $e")
-        InternalServerError(s"Error: $e")
-    }
-  }
+  def part(id: String) = WallPart(template)(plan, id)
 
   def pagelet1 = Action.async { implicit request =>
     Future {
@@ -87,13 +52,21 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
   }
 
   def fallbackPagelet = Action { implicit request =>
-    Ok("fallback!").
+    Ok("<b>fallback!</b>").
       withJavascript(Javascript("hello.js"), Javascript("not found")).
-      withCss(Css("hello.css")).withCookies(Cookie("yo", "man"))
+      withCss(Css("hello.css")).
+      withCookies(Cookie("yo", "man2")).
+      withMetaTags(MetaTag("one", "oneContent"), MetaTag("two", "twoContent")).
+      withJavascriptTop(Javascript("hello2.js"))
+  }
+
+  def more = Action { implicit request =>
+    Ok(views.html.simple("more...")).
+      withCss(Css("hello.css")).
+      withMetaTags(MetaTag("one", "oneContent"), MetaTag("three", "threeContent"))
   }
 
   def newRoot = Action {
     Ok("new root!").withCookies(Cookie("yoRoot", "manRoot"))
   }
-
 }
