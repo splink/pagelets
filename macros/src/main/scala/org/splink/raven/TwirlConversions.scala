@@ -1,6 +1,5 @@
 package org.splink.raven
 
-import org.splink.raven.BrickResult._
 import play.api.Logger
 import play.api.mvc.Cookie
 import play.twirl.api.Html
@@ -8,7 +7,7 @@ import play.twirl.api.Html
 import scala.util.Try
 
 object TwirlConversions {
-  private val logger = Logger(getClass).logger
+  private val log = Logger(getClass).logger
 
   def combine(results: Seq[BrickResult])(template: Seq[Html] => Html) = {
     val htmls = results.map(r => Html(r.body))
@@ -56,7 +55,7 @@ object TwirlConversions {
     if (s.size < expectedSize)
       throw new RuntimeException(s"Not enough children beneath the tree: (${s.mkString(",")})")
     else if (s.size > expectedSize)
-      logger.warn(s"Found too many children beneath the tree: (${s.mkString(",")})")
+      log.warn(s"Found too many children beneath the tree: (${s.mkString(",")})")
 
     t.getOrElse(throw new RuntimeException("Error while rendering the template"))
   }

@@ -2,16 +2,28 @@ package org.splink.raven
 
 import play.api.mvc.{Action, Results}
 
-object TreeTools {
+trait TreeTools {
+  implicit def treeOps(tree: Tree): TreeOps
 
-  implicit class TreeOps(tree: Tree) {
+  trait TreeOps {
+    def skip(id: Symbol): Tree
+    def replace(id: Symbol, other: Part): Tree
+    def find(id: Symbol): Option[Part]
+  }
 
-    def skip(id: Symbol) = {
+}
+
+trait TreeToolsImpl extends TreeTools {
+  override implicit def treeOps(tree: Tree): TreeOps = new TreeOpsImpl(tree)
+
+  class TreeOpsImpl(tree: Tree) extends TreeOps {
+
+    override def skip(id: Symbol) = {
       def f = Action(Results.Ok)
       replace(id, Leaf(id, FunctionInfo(f _, Nil)))
     }
 
-    def replace(id: Symbol, other: Part): Tree = {
+    override def replace(id: Symbol, other: Part): Tree = {
       def rec(p: Part): Part = p match {
         case b@Tree(_, childs, _) if childs.exists(_.id == id) =>
           val idx = childs.indexWhere(_.id == id)
@@ -34,7 +46,7 @@ object TreeTools {
       }
     }
 
-    def find(id: Symbol): Option[Part] = {
+    override def find(id: Symbol): Option[Part] = {
       def rec(p: Part): Option[Part] = p match {
         case _ if p.id == id => Some(p)
         case Tree(_, children_, _) => children_.flatMap(rec).headOption
@@ -43,5 +55,4 @@ object TreeTools {
       rec(tree)
     }
   }
-
 }

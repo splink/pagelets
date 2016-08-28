@@ -1,46 +1,34 @@
 package org.splink.raven
 
-import org.splink.raven.BrickResult.{MetaTag, Css, Javascript}
 import play.api.http.{ContentTypeOf, ContentTypes, Writeable}
 import play.api.mvc.{Codec, Cookie, Result}
 
-object BrickResult {
+trait ResultOperations {
+  implicit def resultOps(result: Result): ResultOps
 
-  sealed trait Resource {
-    def src: String
+  trait ResultOps {
+    def withJavascript(js: Javascript*): Result
+    def withJavascriptTop(js: Javascript*): Result
+    def withCss(css: Css*): Result
+    def withMetaTags(tags: MetaTag*): Result
   }
+}
 
-  case object Javascript {
-    val name: String = "js"
-    val nameTop: String = "jsTop"
-  }
+trait ResultImpl extends ResultOperations {
+  self: Serializer =>
 
-  case class Javascript(src: String) extends Resource
+  override implicit def resultOps(result: Result): ResultOps = new ResultOpsImpl(result)
 
-  case object Css {
-    val name: String = "css"
-  }
+  class ResultOpsImpl(result: Result) extends ResultOps {
+    override def withJavascript(js: Javascript*) = helper(js.map(_.src), Javascript.name)
 
-  case class Css(src: String) extends Resource
+    override def withJavascriptTop(js: Javascript*) = helper(js.map(_.src), Javascript.nameTop)
 
-  case object MetaTag {
-    val name: String = "meta"
-  }
-
-  case class MetaTag(name: String, content: String)
-
-  val empty = BrickResult("")
-
-  implicit class ResultOps(result: Result) {
-    def withJavascript(js: Javascript*) = helper(js.map(_.src), Javascript.name)
-
-    def withJavascriptTop(js: Javascript*) = helper(js.map(_.src), Javascript.nameTop)
-
-    def withCss(css: Css*) = helper(css.map(_.src), Css.name)
+    override def withCss(css: Css*) = helper(css.map(_.src), Css.name)
 
     //TODO is serialization the correct approach?
-    def withMetaTags(tags: MetaTag*) =
-      result.withHeaders(MetaTag.name -> tags.map(Serializer.apply().serialize).mkString("\n"))
+    override def withMetaTags(tags: MetaTag*) =
+      result.withHeaders(MetaTag.name -> tags.map(serializer.serialize).mkString("\n"))
 
     private def helper(elems: Seq[String], id: String) =
       result.withHeaders(s"$id" -> elems.mkString(","))
@@ -53,9 +41,14 @@ object BrickResult {
     Writeable(result => codec.encode(result.body.trim))
 }
 
+object BrickResult {
+  val empty = BrickResult("")
+}
+
 case class BrickResult(body: String,
                        js: Set[Javascript] = Set.empty,
                        jsTop: Set[Javascript] = Set.empty,
                        css: Set[Css] = Set.empty,
                        cookies: Seq[Cookie] = Seq.empty,
                        metaTags: Set[MetaTag] = Set.empty)
+

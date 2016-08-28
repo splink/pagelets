@@ -1,21 +1,34 @@
 package org.splink.raven
 
-import akka.stream.Materializer
-import org.splink.raven.BrickResult.{Css, Javascript, MetaTag}
+import akka.stream.{ActorMaterializer, Materializer}
 import org.splink.raven.Exceptions.TypeException
 import play.api.http.HeaderNames
 import play.api.mvc.{Action, AnyContent, Cookies, Request}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object LeafTools {
+trait LeafTools {
 
-  implicit class LeafOps(leaf: Leaf[_, _]) {
+  implicit def leafOps(leaf: Leaf[_, _]): LeafOps
+
+  trait LeafOps {
+    def execute(fi: FunctionInfo[_], args: Seq[Arg])(
+      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult]
+  }
+
+}
+
+trait LeafToolsImpl extends LeafTools {
+  self: Serializer =>
+
+  override implicit def leafOps(leaf: Leaf[_, _]): LeafOps = new LeafOpsImpl(leaf)
+
+  class LeafOpsImpl(leaf: Leaf[_, _]) extends LeafOps {
     type R = Action[AnyContent]
 
     private case class ArgError(msg: String)
 
-    def execute(fi: FunctionInfo[_], args: Seq[Arg])(
+    override def execute(fi: FunctionInfo[_], args: Seq[Arg])(
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult] =
       values(fi, args: _*).fold(
         err => Future.failed(TypeException(s"$leaf.id ${err.msg}")), {
@@ -58,9 +71,8 @@ object LeafTools {
         val js = to(Javascript.name, Javascript.apply)
         val jsTop = to(Javascript.nameTop, Javascript.apply)
         val css = to(Css.name, Css.apply)
-        val metaTags = header(MetaTag.name).map(_.split("\n").map(Serializer.apply().deserialize[MetaTag]).toSet).getOrElse(Set.empty)
+        val metaTags = header(MetaTag.name).map(_.split("\n").map(serializer.deserialize[MetaTag]).toSet).getOrElse(Set.empty)
         val cookies = header(HeaderNames.SET_COOKIE).map(Cookies.decodeSetCookieHeader).getOrElse(Seq.empty)
-
         (result.body.consumeData, js, jsTop, css, cookies, metaTags)
       }.flatMap { case (eventualByteString, js, jsTop, css, cookies, metaTags) =>
         eventualByteString.map { byteString =>

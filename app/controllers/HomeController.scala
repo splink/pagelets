@@ -3,19 +3,19 @@ package controllers
 import javax.inject._
 
 import akka.stream.Materializer
-import org.splink.raven.BrickResult._
 import org.splink.raven.FunctionMacros._
 import org.splink.raven.TwirlConversions._
 import org.splink.raven._
 import play.api.Environment
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc._
-import views.html.{wrapper, error}
+import views.html.{error, wrapper}
 
 import scala.concurrent.Future
 
 @Singleton
-class HomeController @Inject()(implicit m: Materializer, e: Environment) extends Controller with BricksController {
+class HomeController @Inject()(c: BricksController)(implicit m: Materializer, e: Environment) extends Controller  {
+  import c._
 
   def plan(r: RequestHeader) = Tree('root, Seq(
     Tree('first, Seq(
@@ -32,13 +32,15 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
       replace(Pagelet1, Leaf(Pagelet2, pagelet2 _)).
       replace(Root, Leaf(Pagelet1, newRoot _))
       */
-
+//TODO get materializer somewhere else?
   val template = wrapper(routes.HomeController.resourceFor) _
   val errorTemplate = error(_)
 
+  def resourceFor(fingerprint: String) = ResourceAction(fingerprint)
+
   def index = PageAction(template, errorTemplate)("Index", plan, Arg("s", "Hello!"))
 
-  def part(id: String) = PagePartAction(template, errorTemplate)(plan, id)
+  def part(id: String) = PagePartAction(template, errorTemplate)(plan, Symbol(id))
 
   def pagelet1 = Action.async { implicit request =>
     Future {

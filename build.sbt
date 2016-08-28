@@ -4,6 +4,10 @@ name := """raven"""
 
 version := "0.1-SNAPSHOT"
 
+lazy val commonSettings = Seq(
+  scalaVersion := "2.11.8"
+)
+
 scalacOptions ++= Seq(
   "-unchecked",
   "-deprecation",
@@ -12,16 +16,11 @@ scalacOptions ++= Seq(
   "-language:higherKinds",
   "-language:existentials")
 
-lazy val commonSettings = Seq(
-  scalaVersion := "2.11.8"
-)
-
 lazy val root = (project in file(".")).
   enablePlugins(PlayScala).
   dependsOn(macros).
   settings(commonSettings: _*).
   settings(
-    routesImport += "org.splink.raven.Resource.Fingerprint._",
     // include the macro classes and resources in the main jar
     mappings in (Compile, packageBin) ++= mappings.in(macros, Compile, packageBin).value,
     // include the macro sources in the main source jar
