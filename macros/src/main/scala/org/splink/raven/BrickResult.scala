@@ -40,7 +40,7 @@ object BrickResult {
 
     //TODO is serialization the correct approach?
     def withMetaTags(tags: MetaTag*) =
-      result.withHeaders(MetaTag.name -> tags.map(Serializer.serialize).mkString("\n"))
+      result.withHeaders(MetaTag.name -> tags.map(Serializer.apply().serialize).mkString("\n"))
 
     private def helper(elems: Seq[String], id: String) =
       result.withHeaders(s"$id" -> elems.mkString(","))

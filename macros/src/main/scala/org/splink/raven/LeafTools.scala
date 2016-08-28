@@ -58,7 +58,7 @@ object LeafTools {
         val js = to(Javascript.name, Javascript.apply)
         val jsTop = to(Javascript.nameTop, Javascript.apply)
         val css = to(Css.name, Css.apply)
-        val metaTags = header(MetaTag.name).map(_.split("\n").map(Serializer.deserialize[MetaTag]).toSet).getOrElse(Set.empty)
+        val metaTags = header(MetaTag.name).map(_.split("\n").map(Serializer.apply().deserialize[MetaTag]).toSet).getOrElse(Set.empty)
         val cookies = header(HeaderNames.SET_COOKIE).map(Cookies.decodeSetCookieHeader).getOrElse(Seq.empty)
 
         (result.body.consumeData, js, jsTop, css, cookies, metaTags)

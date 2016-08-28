@@ -20,11 +20,41 @@ case class Page(language: String,
                 body: String,
                 js: Option[Fingerprint] = None)
 
+case class ErrorPage(language: String, title: String, exception: PageletException)
+
 trait BricksController extends Controller {
   val logger = Logger(getClass).logger
   val mason = new MasonImpl(new LeafBuilderImpl)
 
   def resourceFor(fingerprint: String) = ResourceAction(fingerprint)
+
+  def PageAction[T: Writeable](template: Page => T, errorTemplate: ErrorPage => T)(
+    title: String, plan: RequestHeader => Part, args: Arg*)(
+                   implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
+    mason.build(plan(request), args: _*).map { result =>
+      Ok(template(mkPage(title, result))).withCookies(result.cookies: _*)
+    }.recover {
+      case e: PageletException =>
+        logger.error(s"error $e")
+        InternalServerError(errorTemplate(ErrorPage(request2lang.language, title, e)))
+    }
+  }
+
+  def PagePartAction[T: Writeable](template: Page => T, errorTemplate: ErrorPage => T)(
+    plan: RequestHeader => Tree, id: String)(
+               implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { request =>
+    import TreeTools._
+
+    plan(request).find(Symbol(id)).map { part =>
+      val args = request.queryString.map { case (key, values) =>
+        Arg(key, values.head)
+      }.toSeq
+
+      PageAction(template, errorTemplate)(id, _ => part, args: _*).apply(request)
+    }.getOrElse {
+      Future.successful(BadRequest(s"'$id' does not exist"))
+    }
+  }
 
   def mkPage(title: String, result: BrickResult)(implicit r: RequestHeader, env: Environment) = {
     val jsFinger = Resource.update(result.js)
@@ -36,31 +66,4 @@ trait BricksController extends Controller {
       result.body,
       jsFinger)
   }
-
-  def Wall[T: Writeable](template: Page => T)(title: String, plan: Part, args: Arg*)(
-                   implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
-    mason.build(plan, args: _*).map { result =>
-      Ok(template(mkPage(title, result))).withCookies(result.cookies: _*)
-    }.recover {
-      case e: PageletException =>
-        logger.error(s"error $e")
-        InternalServerError(s"Error: $e")
-    }
-  }
-
-  def WallPart[T: Writeable](template: Page => T)(plan: Tree, id: String)(
-               implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { request =>
-    import TreeTools._
-
-    plan.find(Symbol(id)).map { part =>
-      val args = request.queryString.map { case (key, values) =>
-        Arg(key, values.head)
-      }.toSeq
-
-      Wall(template)(id, part, args: _*).apply(request)
-    }.getOrElse {
-      Future.successful(BadRequest(s"'$id' does not exist"))
-    }
-  }
-
 }

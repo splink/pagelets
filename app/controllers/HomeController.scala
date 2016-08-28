@@ -10,14 +10,14 @@ import org.splink.raven._
 import play.api.Environment
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc._
-import views.html.wrapper
+import views.html.{wrapper, error}
 
 import scala.concurrent.Future
 
 @Singleton
 class HomeController @Inject()(implicit m: Materializer, e: Environment) extends Controller with BricksController {
 
-  val plan = Tree('root, Seq(
+  def plan(r: RequestHeader) = Tree('root, Seq(
     Tree('first, Seq(
       Leaf('brick1, pagelet1 _).withFallback(fallbackPagelet _),
       Tree('sub, Seq(
@@ -32,13 +32,13 @@ class HomeController @Inject()(implicit m: Materializer, e: Environment) extends
       replace(Pagelet1, Leaf(Pagelet2, pagelet2 _)).
       replace(Root, Leaf(Pagelet1, newRoot _))
       */
-  //TODO error template
 
   val template = wrapper(routes.HomeController.resourceFor) _
+  val errorTemplate = error(_)
 
-  def index = Wall(template)("Index", plan, Arg("s", "Hello!"))
+  def index = PageAction(template, errorTemplate)("Index", plan, Arg("s", "Hello!"))
 
-  def part(id: String) = WallPart(template)(plan, id)
+  def part(id: String) = PagePartAction(template, errorTemplate)(plan, id)
 
   def pagelet1 = Action.async { implicit request =>
     Future {
