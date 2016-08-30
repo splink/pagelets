@@ -62,7 +62,7 @@ trait BricksControllerImpl extends BricksController with Controller {
         Arg(key, values.head)
       }.toSeq
 
-      PageAction(template, errorTemplate)(id, _ => part, args: _*).apply(request)
+      PageAction(template, errorTemplate)(id.name, _ => part, args: _*).apply(request)
     }.getOrElse {
       Future.successful(BadRequest(s"'$id' does not exist"))
     }

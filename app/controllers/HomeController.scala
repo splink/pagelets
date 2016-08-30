@@ -32,7 +32,7 @@ class HomeController @Inject()(c: BricksController)(implicit m: Materializer, e:
       replace(Pagelet1, Leaf(Pagelet2, pagelet2 _)).
       replace(Root, Leaf(Pagelet1, newRoot _))
       */
-//TODO get materializer somewhere else?
+
   val template = wrapper(routes.HomeController.resourceFor) _
   val errorTemplate = error(_)
 
@@ -40,7 +40,7 @@ class HomeController @Inject()(c: BricksController)(implicit m: Materializer, e:
 
   def index = PageAction(template, errorTemplate)("Index", plan, Arg("s", "Hello!"))
 
-  def part(id: String) = PagePartAction(template, errorTemplate)(plan, Symbol(id))
+  def part(id: Symbol) = PagePartAction(template, errorTemplate)(plan, id)
 
   def pagelet1 = Action.async { implicit request =>
     Future {

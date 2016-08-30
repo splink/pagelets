@@ -30,7 +30,7 @@ trait ResultImpl extends ResultOperations {
     override def withMetaTags(tags: MetaTag*) =
       result.withHeaders(MetaTag.name -> tags.map(serializer.serialize).mkString("\n"))
 
-    private def helper(elems: Seq[String], id: String) =
+    def helper(elems: Seq[String], id: String) =
       result.withHeaders(s"$id" -> elems.mkString(","))
   }
 

@@ -26,7 +26,7 @@ trait LeafToolsImpl extends LeafTools {
   class LeafOpsImpl(leaf: Leaf[_, _]) extends LeafOps {
     type R = Action[AnyContent]
 
-    private case class ArgError(msg: String)
+    case class ArgError(msg: String)
 
     override def execute(fi: FunctionInfo[_], args: Seq[Arg])(
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult] =
@@ -59,7 +59,7 @@ trait LeafToolsImpl extends LeafTools {
         }
       )
 
-    private implicit def transform(action: Action[AnyContent])(
+    implicit def transform(action: Action[AnyContent])(
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult] =
       action(r).map { result =>
 
@@ -80,7 +80,7 @@ trait LeafToolsImpl extends LeafTools {
         }
       }
 
-    private def values[T](info: FunctionInfo[T], args: Arg*): Either[ArgError, Seq[Any]] = eitherSeq {
+    def values[T](info: FunctionInfo[T], args: Arg*): Either[ArgError, Seq[Any]] = eitherSeq {
       def predicate(name: String, typ: String, arg: Arg) =
         name == arg.name && typ == scalaClassNameFor(arg.value)
 
@@ -94,7 +94,7 @@ trait LeafToolsImpl extends LeafTools {
       }
     }
 
-    private def scalaClassNameFor(v: Any) = (v match {
+    def scalaClassNameFor(v: Any) = (v match {
       case x: Int => Int.getClass
       case x: Double => Double.getClass
       case x: Float => Float.getClass
@@ -106,7 +106,7 @@ trait LeafToolsImpl extends LeafTools {
       case x: Any => x.getClass
     }).getCanonicalName.replaceAll("\\$", "")
 
-    private def eitherSeq[A, B](e: Seq[Either[A, B]]) =
+    def eitherSeq[A, B](e: Seq[Either[A, B]]) =
       e.foldRight(Right(Seq.empty): Either[A, Seq[B]]) {
         (e, acc) => for (xs <- acc.right; x <- e.right) yield xs.+:(x)
       }

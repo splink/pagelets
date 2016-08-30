@@ -20,7 +20,7 @@ trait LeafBuilder {
 trait LeafBuilderImpl extends LeafBuilder {
   self: LeafTools =>
   override val leafBuilderService = new LeafBuilderService {
-    private val log = play.api.Logger(getClass).logger
+    val log = play.api.Logger(getClass).logger
 
     override def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId, isRoot: Boolean)(
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {

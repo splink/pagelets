@@ -20,7 +20,7 @@ trait MasonImpl extends Mason {
   self: LeafBuilder =>
 
   override val mason = new MasonService {
-    private val log = play.api.Logger(getClass).logger
+    val log = play.api.Logger(getClass).logger
 
     override def visualize(p: Part) = {
       def space(layer: Int) = (0 to layer).map(_ => "-").mkString

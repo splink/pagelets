@@ -20,6 +20,7 @@ lazy val root = (project in file(".")).
   enablePlugins(PlayScala).
   dependsOn(macros).
   settings(commonSettings: _*).
+  settings(routesImport += "org.splink.raven.Binders._").
   settings(
     // include the macro classes and resources in the main jar
     mappings in (Compile, packageBin) ++= mappings.in(macros, Compile, packageBin).value,

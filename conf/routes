@@ -4,7 +4,7 @@
 
 # An example controller showing a sample home page
 GET        /                             controllers.HomeController.index
-GET        /part/:id                     controllers.HomeController.part(id: String)
+GET        /part/:id                     controllers.HomeController.part(id: Symbol)
 GET        /resource/:fingerprint        controllers.HomeController.resourceFor(fingerprint: String)
 
 # Map static resources from the /public folder to the /assets URL path
