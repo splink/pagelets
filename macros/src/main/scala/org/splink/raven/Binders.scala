@@ -8,7 +8,7 @@ object Binders {
     def bind(key: String, value: String) = try {
       Right(Symbol(value))
     } catch {
-      case e: Exception => Left("Cannot parse parameter '" + key + "' as Symbol")
+      case _: Exception => Left(s"Cannot parse parameter '$key' as Symbol")
     }
 
     def unbind(key: String, value: Symbol): String = value.name

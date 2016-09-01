@@ -25,22 +25,22 @@ class HomeController @Inject()(c: BricksController)(implicit m: Materializer, e:
         Leaf('more, more _)
       ))
     ), results => combine(results)(views.html.test.apply)
-    )))
+    ))).skip('brick1).
+      replace('brick2, Leaf('yo, yo _))
 
-  /*.
-      skip(Pagelet2).
-      replace(Pagelet1, Leaf(Pagelet2, pagelet2 _)).
-      replace(Root, Leaf(Pagelet1, newRoot _))
-      */
 
-  val template = wrapper(routes.HomeController.resourceFor) _
+  val mainTemplate = wrapper(routes.HomeController.resourceFor) _
   val errorTemplate = error(_)
 
   def resourceFor(fingerprint: String) = ResourceAction(fingerprint)
 
-  def index = PageAction(template, errorTemplate)("Index", plan, Arg("s", "Hello!"))
+  def index = PageAction(errorTemplate)("Index", plan, Arg("s", "Hello!")) { (request, page) =>
+    mainTemplate(page)
+  }
 
-  def part(id: Symbol) = PagePartAction(template, errorTemplate)(plan, id)
+  def part(id: Symbol) = PagePartAction(errorTemplate)(plan, id) { (request, page) =>
+    mainTemplate(page)
+  }
 
   def pagelet1 = Action.async { implicit request =>
     Future {
@@ -68,7 +68,7 @@ class HomeController @Inject()(c: BricksController)(implicit m: Materializer, e:
       withMetaTags(MetaTag("one", "oneContent"), MetaTag("three", "threeContent"))
   }
 
-  def newRoot = Action {
-    Ok("new root!").withCookies(Cookie("yoRoot", "manRoot"))
+  def yo = Action {
+    Ok("yo!").withCookies(Cookie("yoRoot", "manRoot"))
   }
 }

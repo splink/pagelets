@@ -6,7 +6,9 @@ import org.splink.raven.Resources.Fingerprint
 import play.api.http.Writeable
 import play.api.mvc._
 import play.api.{Environment, Logger}
+import scala.concurrent.duration._
 
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 
 case class Head(title: String,
@@ -25,28 +27,37 @@ case class ErrorPage(language: String,
 
 
 trait BricksController {
-  implicit def resultOps(result: Result): ResultOperations#ResultOps
+  implicit def resultOps(result: Result): ResultTools#ResultOps
 
-  def PageAction[T: Writeable](template: Page => T, errorTemplate: ErrorPage => T)(
-    title: String, plan: RequestHeader => Part, args: Arg*)(
+  implicit def treeOps(tree: Tree): TreeTools#TreeOps
+
+  def ResourceAction(fingerprint: String, validFor: Duration = 365.days): Action[AnyContent]
+
+  def PageAction[T: Writeable](errorTemplate: ErrorPage => T)(
+    title: String, plan: RequestHeader => Part, args: Arg*)(template: (Request[_], Page) => T)(
                                 implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
 
-  def PagePartAction[T: Writeable](template: Page => T, errorTemplate: ErrorPage => T)(
-    plan: RequestHeader => Tree, id: Symbol)(
+  def PagePartAction[T: Writeable](errorTemplate: ErrorPage => T)(
+    plan: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
                                     implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
 }
 
 trait BricksControllerImpl extends BricksController with Controller {
-  self: Mason with TreeTools with ResultOperations =>
+  self: Mason with TreeTools with ResultTools with ResourceActions =>
   val log = Logger(getClass).logger
 
   override implicit def resultOps(result: Result): ResultOps = resultOps(result)
 
-  override def PageAction[T: Writeable](template: Page => T, errorTemplate: ErrorPage => T)(
-    title: String, plan: RequestHeader => Part, args: Arg*)(
+  override implicit def treeOps(tree: Tree): TreeOps = treeOps(tree)
+
+  override def ResourceAction(fingerprint: String, validFor: Duration = 365.days) =
+    resourceService.ResourceAction(fingerprint, validFor)
+
+  override def PageAction[T: Writeable](errorTemplate: ErrorPage => T)(
+    title: String, plan: RequestHeader => Part, args: Arg*)(template: (Request[_], Page) => T)(
                    implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
     mason.build(plan(request), args: _*).map { result =>
-      Ok(template(mkPage(title, result))).withCookies(result.cookies: _*)
+      Ok(template(request, mkPage(title, result))).withCookies(result.cookies: _*)
     }.recover {
       case e: PageletException =>
         log.error(s"error $e")
@@ -54,15 +65,15 @@ trait BricksControllerImpl extends BricksController with Controller {
     }
   }
 
-  override def PagePartAction[T: Writeable](template: Page => T, errorTemplate: ErrorPage => T)(
-    plan: RequestHeader => Tree, id: Symbol)(
+  override def PagePartAction[T: Writeable](errorTemplate: ErrorPage => T)(
+    plan: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
                implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { request =>
     plan(request).find(id).map { part =>
       val args = request.queryString.map { case (key, values) =>
         Arg(key, values.head)
       }.toSeq
 
-      PageAction(template, errorTemplate)(id.name, _ => part, args: _*).apply(request)
+      PageAction(errorTemplate)(id.name, _ => part, args: _*)(template).apply(request)
     }.getOrElse {
       Future.successful(BadRequest(s"'$id' does not exist"))
     }

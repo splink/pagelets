@@ -3,7 +3,7 @@ package org.splink.raven
 import play.api.http.{ContentTypeOf, ContentTypes, Writeable}
 import play.api.mvc.{Codec, Cookie, Result}
 
-trait ResultOperations {
+trait ResultTools {
   implicit def resultOps(result: Result): ResultOps
 
   trait ResultOps {
@@ -14,7 +14,7 @@ trait ResultOperations {
   }
 }
 
-trait ResultImpl extends ResultOperations {
+trait ResultImpl extends ResultTools {
   self: Serializer =>
 
   override implicit def resultOps(result: Result): ResultOps = new ResultOpsImpl(result)
