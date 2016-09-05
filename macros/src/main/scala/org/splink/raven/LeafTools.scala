@@ -26,6 +26,8 @@ trait LeafToolsImpl extends LeafTools {
   class LeafOpsImpl(leaf: Leaf[_, _]) extends LeafOps {
     type R = Action[AnyContent]
 
+    val log = play.api.Logger(getClass).logger
+
     case class ArgError(msg: String)
 
     override def execute(fi: FunctionInfo[_], args: Seq[Arg])(
@@ -71,8 +73,14 @@ trait LeafToolsImpl extends LeafTools {
         val js = to(Javascript.name, Javascript.apply)
         val jsTop = to(Javascript.nameTop, Javascript.apply)
         val css = to(Css.name, Css.apply)
-        val metaTags = header(MetaTag.name).map(_.split("\n").map(serializer.deserialize[MetaTag]).toSet).getOrElse(Set.empty)
+
+        val metaTags = header(MetaTag.name).map(_.split("\n").flatMap(serializer.deserialize[MetaTag](_).fold(e => {
+          log.error(e.msg)
+          None
+        }, s => Some(s))).toSeq).getOrElse(Seq.empty).toSet
+
         val cookies = header(HeaderNames.SET_COOKIE).map(Cookies.decodeSetCookieHeader).getOrElse(Seq.empty)
+
         (result.body.consumeData, js, jsTop, css, cookies, metaTags)
       }.flatMap { case (eventualByteString, js, jsTop, css, cookies, metaTags) =>
         eventualByteString.map { byteString =>

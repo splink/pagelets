@@ -29,7 +29,7 @@ trait LeafBuilderImpl extends LeafBuilder {
                   fnc: Seq[Arg] => Future[BrickResult],
                   fallbackFnc: (Seq[Arg], Throwable) => Future[BrickResult]) = {
 
-        def messageFor(t: Throwable) = if (Option(t.getMessage).isDefined) t.getMessage else ""
+        def messageFor(t: Throwable) = if (Option(t.getMessage).isDefined) t.getMessage else "No message"
 
         val startTime = System.currentTimeMillis()
         val s = if (isFallback) " fallback" else ""

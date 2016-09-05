@@ -25,7 +25,7 @@ class HomeController @Inject()(c: BricksController)(implicit m: Materializer, e:
         Leaf('more, more _)
       ))
     ), results => combine(results)(views.html.test.apply)
-    ))).skip('brick1).
+    ))).//skip('brick1).
       replace('brick2, Leaf('yo, yo _))
 
 
