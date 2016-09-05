@@ -8,3 +8,4 @@ class Assembly extends BricksControllerImpl
   with ResultImpl
   with SerializerImpl
   with ResourceActionsImpl
+  with VisualizerImpl

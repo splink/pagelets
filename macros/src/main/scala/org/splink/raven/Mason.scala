@@ -9,11 +9,8 @@ trait Mason {
   def mason: MasonService
 
   trait MasonService {
-    def visualize(p: Part): String
-
     def build(pagelet: Part, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult]
   }
-
 }
 
 trait MasonImpl extends Mason {
@@ -21,27 +18,6 @@ trait MasonImpl extends Mason {
 
   override val mason = new MasonService {
     val log = play.api.Logger(getClass).logger
-
-    override def visualize(p: Part) = {
-      def space(layer: Int) = (0 to layer).map(_ => "-").mkString
-
-      def mkArgsString(fnc: FunctionInfo[_]) =
-        if (fnc.types.isEmpty) ""
-        else "(" + fnc.types.map { case (name, typ) =>
-          val index = typ.lastIndexOf(".")
-          name + ": " + (if (index > -1) typ.substring(index + 1) else typ)
-        }.mkString(", ") + ")"
-
-      def rec(p: Part, layer: Int = 0): String = p match {
-        case t: Tree =>
-          val a = space(layer) + t.id + "\n"
-          a + t.children.map(c => rec(c, layer + 1)).mkString
-        case Leaf(id, fnc, _) =>
-          space(layer) + id + mkArgsString(fnc) + "\n"
-      }
-
-      rec(p)
-    }
 
     override def build(pagelet: Part, args: Arg*)(
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {

@@ -35,6 +35,7 @@ class HomeController @Inject()(c: BricksController)(implicit m: Materializer, e:
   def resourceFor(fingerprint: String) = ResourceAction(fingerprint)
 
   def index = PageAction(errorTemplate)("Index", plan, Arg("s", "Hello!")) { (request, page) =>
+    println(visualize(plan(request)))
     mainTemplate(page)
   }
 

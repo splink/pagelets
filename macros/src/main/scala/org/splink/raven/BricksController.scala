@@ -31,6 +31,8 @@ trait BricksController {
 
   implicit def treeOps(tree: Tree): TreeTools#TreeOps
 
+  def visualize(p: Part): String
+
   def ResourceAction(fingerprint: String, validFor: Duration = 365.days): Action[AnyContent]
 
   def PageAction[T: Writeable](errorTemplate: ErrorPage => T)(
@@ -43,12 +45,14 @@ trait BricksController {
 }
 
 trait BricksControllerImpl extends BricksController with Controller {
-  self: Mason with TreeTools with ResultTools with ResourceActions =>
+  self: Mason with TreeTools with ResultTools with ResourceActions with Visualizer =>
   val log = Logger(getClass).logger
 
   override implicit def resultOps(result: Result): ResultOps = resultOps(result)
 
   override implicit def treeOps(tree: Tree): TreeOps = treeOps(tree)
+
+  override def visualize(p: Part) = visualizer.visualize(p)
 
   override def ResourceAction(fingerprint: String, validFor: Duration = 365.days) =
     resourceService.ResourceAction(fingerprint, validFor)
