@@ -1,6 +1,6 @@
 package org.splink.raven
 
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.Materializer
 import org.splink.raven.Exceptions.TypeException
 import play.api.http.HeaderNames
 import play.api.mvc.{Action, AnyContent, Cookies, Request}
@@ -74,7 +74,7 @@ trait LeafToolsImpl extends LeafTools {
         val jsTop = to(Javascript.nameTop, Javascript.apply)
         val css = to(Css.name, Css.apply)
 
-        val metaTags = header(MetaTag.name).map(_.split("\n").flatMap(serializer.deserialize[MetaTag](_).fold(e => {
+        val metaTags = header(MetaTag.name).map(_.split(",").flatMap(serializer.deserialize[MetaTag](_).fold(e => {
           log.error(e.msg)
           None
         }, s => Some(s))).toSeq).getOrElse(Seq.empty).toSet

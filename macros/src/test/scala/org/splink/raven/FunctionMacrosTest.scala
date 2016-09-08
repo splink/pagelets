@@ -34,7 +34,7 @@ class FunctionMacrosTest extends FlatSpec with Matchers {
     result.types.head should be ("c" -> "org.splink.raven.FunctionMacrosTest.TestFunctions.Complex")
   }
 
-  "A function literal" should "not yield any types, because it is impossible to determine it's parameter name(s)" in {
+  "A function literal" should "not yield any type info, because it is impossible to determine it's parameter name(s)" in {
     val result = signature(TestFunctions.f5 _)
     result.types should be (empty)
   }

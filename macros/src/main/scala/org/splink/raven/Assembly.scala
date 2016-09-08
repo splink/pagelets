@@ -5,7 +5,7 @@ class Assembly extends BricksControllerImpl
   with LeafBuilderImpl
   with LeafToolsImpl
   with TreeToolsImpl
-  with ResultImpl
+  with ResultToolsImpl
   with SerializerImpl
   with ResourceActionsImpl
   with VisualizerImpl

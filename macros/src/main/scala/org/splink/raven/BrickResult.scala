@@ -1,6 +1,5 @@
 package org.splink.raven
 
-import org.splink.raven.TwirlConversions._
 import play.api.Logger
 import play.api.http.{ContentTypeOf, ContentTypes, Writeable}
 import play.api.mvc.{Codec, Cookie, Result}
@@ -10,17 +9,14 @@ trait ResultTools {
 
   trait ResultOps {
     def withJavascript(js: Javascript*): Result
-
     def withJavascriptTop(js: Javascript*): Result
-
     def withCss(css: Css*): Result
-
     def withMetaTags(tags: MetaTag*): Result
   }
 
 }
 
-trait ResultImpl extends ResultTools {
+trait ResultToolsImpl extends ResultTools {
   self: Serializer =>
 
   override implicit def resultOps(result: Result): ResultOps = new ResultOpsImpl(result)
@@ -34,12 +30,11 @@ trait ResultImpl extends ResultTools {
 
     override def withCss(css: Css*) = helper(css.map(_.src), Css.name)
 
-    //TODO is serialization the correct approach?
     override def withMetaTags(tags: MetaTag*) =
       result.withHeaders(MetaTag.name -> tags.flatMap(serializer.serialize(_).fold(e => {
         log.error(e.msg)
         None
-      }, s => Some(s))).mkString("\n"))
+      }, s => Some(s))).mkString(","))
 
     def helper(elems: Seq[String], id: String) =
       result.withHeaders(s"$id" -> elems.mkString(","))
