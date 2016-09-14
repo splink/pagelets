@@ -1,6 +1,5 @@
 package org.splink.raven
 
-import akka.stream.ActorMaterializer
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FlatSpec, Matchers}
 import play.api.http.HttpEntity

@@ -27,10 +27,6 @@ case class ErrorPage(language: String,
 
 
 trait BricksController {
-  implicit def resultOps(result: Result): ResultTools#ResultOps
-
-  implicit def treeOps(tree: Tree): TreeTools#TreeOps
-
   def visualize(p: Part): String
 
   def ResourceAction(fingerprint: String, validFor: Duration = 365.days): Action[AnyContent]
@@ -42,15 +38,22 @@ trait BricksController {
   def PagePartAction[T: Writeable](errorTemplate: ErrorPage => T)(
     plan: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
                                     implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
+
+
+  import scala.language.experimental.macros
+
+  implicit def materialize[T]: Fnc[T] = macro FunctionMacros.materializeImpl[T]
+
+  implicit def signature[T](f: T)(implicit fnc: Fnc[T]): FunctionInfo[T] = macro FunctionMacros.signatureImpl[T]
+
+  implicit def resultOps(result: Result): ResultTools#ResultOps
+
+  implicit def treeOps(tree: Tree): TreeTools#TreeOps
 }
 
 trait BricksControllerImpl extends BricksController with Controller {
   self: Mason with TreeTools with ResultTools with ResourceActions with Visualizer =>
   val log = Logger(getClass).logger
-
-  override implicit def resultOps(result: Result): ResultOps = resultOps(result)
-
-  override implicit def treeOps(tree: Tree): TreeOps = treeOps(tree)
 
   override def visualize(p: Part) = visualizer.visualize(p)
 
@@ -59,7 +62,7 @@ trait BricksControllerImpl extends BricksController with Controller {
 
   override def PageAction[T: Writeable](errorTemplate: ErrorPage => T)(
     title: String, plan: RequestHeader => Part, args: Arg*)(template: (Request[_], Page) => T)(
-                   implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
+                                         implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
     mason.build(plan(request), args: _*).map { result =>
       Ok(template(request, mkPage(title, result))).withCookies(result.cookies: _*)
     }.recover {
@@ -71,7 +74,7 @@ trait BricksControllerImpl extends BricksController with Controller {
 
   override def PagePartAction[T: Writeable](errorTemplate: ErrorPage => T)(
     plan: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
-               implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { request =>
+                                             implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { request =>
     plan(request).find(id).map { part =>
       val args = request.queryString.map { case (key, values) =>
         Arg(key, values.head)

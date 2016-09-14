@@ -3,7 +3,6 @@ package controllers
 import javax.inject._
 
 import akka.stream.Materializer
-import org.splink.raven.FunctionMacros._
 import org.splink.raven.TwirlConversions._
 import org.splink.raven._
 import play.api.Environment

@@ -74,10 +74,12 @@ trait LeafToolsImpl extends LeafTools {
         val jsTop = to(Javascript.nameTop, Javascript.apply)
         val css = to(Css.name, Css.apply)
 
-        val metaTags = header(MetaTag.name).map(_.split(",").flatMap(serializer.deserialize[MetaTag](_).fold(e => {
-          log.error(e.msg)
-          None
-        }, s => Some(s))).toSeq).getOrElse(Seq.empty).toSet
+        val metaTags = header(MetaTag.name).map(_.split(",").flatMap { s =>
+          serializer.deserialize[MetaTag](s).fold(e => {
+            log.error(e.msg)
+            None
+          }, s => Some(s))
+        }.toSeq).getOrElse(Seq.empty).toSet
 
         val cookies = header(HeaderNames.SET_COOKIE).map(Cookies.decodeSetCookieHeader).getOrElse(Seq.empty)
 
