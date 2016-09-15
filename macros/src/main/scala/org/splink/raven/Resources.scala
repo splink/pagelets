@@ -54,6 +54,7 @@ object Resources {
       maybeContent.map { content =>
         acc + content
       }.getOrElse {
+        log.debug(s"Load resource '${BasePath + next.src}'")
         val text = e.resourceAsStream(BasePath + next.src).map(Source.fromInputStream(_).mkString).getOrElse {
           log.warn(s"Missing ${mimeTypeFor(next)} resource: ${next.src}")
           ""
