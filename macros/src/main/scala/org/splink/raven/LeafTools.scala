@@ -33,7 +33,7 @@ trait LeafToolsImpl extends LeafTools {
     override def execute(fi: FunctionInfo[_], args: Seq[Arg])(
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult] =
       values(fi, args: _*).fold(
-        err => Future.failed(TypeException(s"$leaf.id ${err.msg}")), {
+        err => Future.failed(TypeException(s"${leaf.id}: ${err.msg}")), {
           case Nil =>
             fi.fnc.asInstanceOf[() => R]()
           case a :: Nil =>
@@ -57,7 +57,7 @@ trait LeafToolsImpl extends LeafTools {
           case a :: b :: c :: d :: e :: f :: g :: h :: i :: j :: Nil =>
             fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f, g, h, i, j)
           case xs =>
-            throw new IllegalArgumentException(s"$leaf.id too many arguments: ${xs.size}")
+            Future.failed(new IllegalArgumentException(s"${leaf.id}: too many arguments: ${xs.size}"))
         }
       )
 
