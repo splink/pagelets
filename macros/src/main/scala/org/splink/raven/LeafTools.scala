@@ -32,7 +32,7 @@ trait LeafToolsImpl extends LeafTools {
 
     override def execute(fi: FunctionInfo[_], args: Seq[Arg])(
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult] =
-      values(fi, args: _*).fold(
+      values(fi, args).fold(
         err => Future.failed(TypeException(s"${leaf.id}: ${err.msg}")), {
           case Nil =>
             fi.fnc.asInstanceOf[() => R]()
@@ -90,13 +90,13 @@ trait LeafToolsImpl extends LeafTools {
         }
       }
 
-    def values[T](info: FunctionInfo[T], args: Arg*): Either[ArgError, Seq[Any]] = eitherSeq {
+    def values[T](info: FunctionInfo[T], args: Seq[Arg]): Either[ArgError, Seq[Any]] = eitherSeq {
       def predicate(name: String, typ: String, arg: Arg) =
         name == arg.name && typ == scalaClassNameFor(arg.value)
 
       info.types.map { case (name, typ) =>
-        args.find(arg => predicate(name, typ, arg)).map { p =>
-          Right(p.value)
+        args.find(arg => predicate(name, typ, arg)).map { a =>
+          Right(a.value)
         }.getOrElse {
           val msg = args.map(arg => s"${arg.name}:${scalaClassNameFor(arg.value)}").mkString(",")
           Left(ArgError(s"'$name:$typ' not found in Arguments($msg)"))
