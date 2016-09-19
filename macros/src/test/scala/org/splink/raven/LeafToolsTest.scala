@@ -87,7 +87,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
     an[ClassCastException] should be thrownBy tools.leafOps(leaf).execute(info, Seq.empty)
   }
 
-  def leafOpsImpl = {
+  def leafOps = {
     val leaf = Leaf('someId, FunctionInfo(() => "unused", Nil))
     tools.leafOps(leaf).asInstanceOf[LeafToolsImpl#LeafOpsImpl]
   }
@@ -95,7 +95,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
   "LeafTools#transform" should "yield the correct body" in {
     def fnc(s: String) = Action(Results.Ok(s))
 
-    val result = leafOpsImpl.transform(fnc("Hi")).futureValue
+    val result = leafOps.transform(fnc("Hi")).futureValue
     result.body should equal("Hi")
   }
 
@@ -104,7 +104,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
       Results.Ok(s).withHeaders(Javascript.name -> "a.js,b.js,b.js")
     }
 
-    val result = leafOpsImpl.transform(fnc("Hi")).futureValue
+    val result = leafOps.transform(fnc("Hi")).futureValue
     result.js should equal(Set(Javascript("a.js"), Javascript("b.js")))
   }
 
@@ -113,7 +113,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
       Results.Ok(s).withHeaders(Javascript.nameTop -> "a.js,b.js,b.js")
     }
 
-    val result = leafOpsImpl.transform(fnc("Hi")).futureValue
+    val result = leafOps.transform(fnc("Hi")).futureValue
 
     result.js should equal(Set.empty)
     result.jsTop should equal(Set(Javascript("a.js"), Javascript("b.js")))
@@ -124,7 +124,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
       Results.Ok(s).withHeaders(Css.name -> "a.css,b.css,b.css")
     }
 
-    val result = leafOpsImpl.transform(fnc("Hi")).futureValue
+    val result = leafOps.transform(fnc("Hi")).futureValue
     result.css should equal(Set(Css("a.css"), Css("b.css")))
   }
 
@@ -137,7 +137,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
       Results.Ok(s).withHeaders(MetaTag.name -> s"$s1,$s2,$s2")
     }
 
-    val result = leafOpsImpl.transform(fnc("Hi")).futureValue
+    val result = leafOps.transform(fnc("Hi")).futureValue
     result.metaTags should equal(Set(MetaTag("key1", "value1"), MetaTag("key2", "value2")))
   }
 
@@ -146,7 +146,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
       Results.Ok(s).withCookies(Cookie("cookie1", "value1"), Cookie("cookie1", "value2"))
     }
 
-    val result = leafOpsImpl.transform(fnc("Hi")).futureValue
+    val result = leafOps.transform(fnc("Hi")).futureValue
     result.cookies should equal(Seq(Cookie("cookie1", "value2")))
   }
 
@@ -156,7 +156,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") ::("d", "scala.Double") :: Nil)
     val args = Seq(Arg("s", "hello"), Arg("d", 1d))
 
-    leafOpsImpl.values(info, args).right.value should equal(Seq("hello", 1d))
+    leafOps.values(info, args).right.value should equal(Seq("hello", 1d))
   }
 
   it should "extract the Arg values if there are more args then types" in {
@@ -165,7 +165,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") ::("d", "scala.Double") :: Nil)
     val args = Seq(Arg("s", "hello"), Arg("d", 1d), Arg("i", 1))
 
-    leafOpsImpl.values(info, args).right.value should equal(Seq("hello", 1d))
+    leafOps.values(info, args).right.value should equal(Seq("hello", 1d))
   }
 
   it should "yield an ArgError if the types do not match" in {
@@ -174,7 +174,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") ::("d", "scala.Int") :: Nil)
     val args = Seq(Arg("s", "hello"), Arg("d", 1d))
 
-    leafOpsImpl.values(info, args).left.value.msg should equal(
+    leafOps.values(info, args).left.value.msg should equal(
       "'d:scala.Int' not found in Arguments(s:java.lang.String,d:scala.Double)")
   }
 
@@ -184,7 +184,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") ::("i", "scala.Double") :: Nil)
     val args = Seq(Arg("s", "hello"), Arg("d", 1d))
 
-    leafOpsImpl.values(info, args).left.value.msg should equal(
+    leafOps.values(info, args).left.value.msg should equal(
       "'i:scala.Double' not found in Arguments(s:java.lang.String,d:scala.Double)"
     )
   }
@@ -195,94 +195,94 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") ::("d", "scala.Double") :: Nil)
     val args = Seq(Arg("s", "hello"))
 
-    leafOpsImpl.values(info, args).left.value.msg should equal(
+    leafOps.values(info, args).left.value.msg should equal(
       "'d:scala.Double' not found in Arguments(s:java.lang.String)"
     )
   }
 
   "LeafTools#scalaClassNameFor" should "return the classname for Int" in {
-    val name = leafOpsImpl.scalaClassNameFor(1)
+    val name = leafOps.scalaClassNameFor(1)
     name should equal("scala.Int")
   }
 
   it should "return the classname for String" in {
-    val name = leafOpsImpl.scalaClassNameFor("123")
+    val name = leafOps.scalaClassNameFor("123")
     name should equal("java.lang.String")
   }
 
   it should "return the classname for Double" in {
-    val name = leafOpsImpl.scalaClassNameFor(1d)
+    val name = leafOps.scalaClassNameFor(1d)
     name should equal("scala.Double")
   }
 
   it should "return the classname for Float" in {
-    val name = leafOpsImpl.scalaClassNameFor(1f)
+    val name = leafOps.scalaClassNameFor(1f)
     name should equal("scala.Float")
   }
 
   it should "return the classname for Long" in {
-    val name = leafOpsImpl.scalaClassNameFor(1l)
+    val name = leafOps.scalaClassNameFor(1l)
     name should equal("scala.Long")
   }
 
   it should "return the classname for Short" in {
-    val name = leafOpsImpl.scalaClassNameFor(1.toShort)
+    val name = leafOps.scalaClassNameFor(1.toShort)
     name should equal("scala.Short")
   }
 
   it should "return the classname for Byte" in {
-    val name = leafOpsImpl.scalaClassNameFor(1.toByte)
+    val name = leafOps.scalaClassNameFor(1.toByte)
     name should equal("scala.Byte")
   }
 
   it should "return the classname for Boolean" in {
-    val name = leafOpsImpl.scalaClassNameFor(true)
+    val name = leafOps.scalaClassNameFor(true)
     name should equal("scala.Boolean")
   }
 
   it should "return the classname for Char" in {
-    val name = leafOpsImpl.scalaClassNameFor('a')
+    val name = leafOps.scalaClassNameFor('a')
     name should equal("scala.Char")
   }
 
   it should "return the classname for Symbol" in {
-    val name = leafOpsImpl.scalaClassNameFor('someSymbol)
+    val name = leafOps.scalaClassNameFor('someSymbol)
     name should equal("scala.Symbol")
   }
 
   it should "return 'undefined' for any local class without a canonical name" in {
     case class Test(name: String)
-    val name = leafOpsImpl.scalaClassNameFor(Test("yo"))
+    val name = leafOps.scalaClassNameFor(Test("yo"))
     name should equal("undefined")
   }
 
   case class Test2(name: String)
   it should "return the classname for any custom class" in {
-    val name = leafOpsImpl.scalaClassNameFor(Test2("yo"))
+    val name = leafOps.scalaClassNameFor(Test2("yo"))
     name should equal("org.splink.raven.LeafToolsTest.Test2")
   }
 
   it should "return the Option classname Some[_]" in {
-    val name = leafOpsImpl.scalaClassNameFor(Option("yo"))
+    val name = leafOps.scalaClassNameFor(Option("yo"))
     name should equal("scala.Option")
   }
 
   it should "return the Option classname for None" in {
-    val name = leafOpsImpl.scalaClassNameFor(None)
+    val name = leafOps.scalaClassNameFor(None)
     name should equal("scala.Option")
   }
 
   "LeafTools#eitherSeq" should "convert the whole Seq if there are no Left" in {
     val xs = Seq(Right("One"), Right("Two"), Right("Three"))
 
-    val result = leafOpsImpl.eitherSeq(xs)
+    val result = leafOps.eitherSeq(xs)
     result should equal(Right(Seq("One", "Two", "Three")))
   }
 
   it should "produce the last Left if the given Seq contains one" in {
     val xs = Seq(Right("One"), Left("Oops"), Left("Oops2"), Right("four"))
 
-    val result = leafOpsImpl.eitherSeq(xs)
+    val result = leafOps.eitherSeq(xs)
     result should equal(Left("Oops2"))
   }
 

@@ -25,11 +25,11 @@ trait MasonImpl extends Mason {
 
       def rec(p: Part): Future[BrickResult] =
         p match {
-          case Tree(id, children, combiner) =>
+          case t@Tree(id, children) =>
             val start = System.currentTimeMillis()
             log.info(s"$requestId Invoke pagelet ${p.id}")
 
-            Future.sequence(children.map(rec)).map(combiner).map { result =>
+            Future.sequence(children.map(rec)).map(t.combine).map { result =>
               log.info(s"$requestId Finish pagelet ${p.id} took ${System.currentTimeMillis() - start}ms")
               result
             }
