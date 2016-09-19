@@ -19,7 +19,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
   val tools = new LeafToolsImpl with SerializerImpl
 
   "LeafTools#execute" should
-    "successfully produce a Future if FunctionInfo's types fit the supplied args and it's fnc returns an Action[AnyContent]" in {
+    "successfully produce a Future if FunctionInfo's types fit the args and it's fnc returns an Action[AnyContent]" in {
 
     def fnc(s: String) = Action(Results.Ok(s))
 
@@ -49,7 +49,8 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
 
   it should "produce a TypeException if FunctionInfo.fnc requires more arguments then the execute function supports" in {
 
-    def fnc(s0: String, s1: String, s2: String, s3: String, s4: String, s5: String, s6: String, s7: String, s8: String, s9: String, s10: String) = Action(Results.Ok(s0))
+    def fnc(s0: String, s1: String, s2: String, s3: String, s4: String, s5: String,
+            s6: String, s7: String, s8: String, s9: String, s10: String) = Action(Results.Ok(s0))
 
     val info = FunctionInfo(fnc _,
       ("s0", "java.lang.String") ::
@@ -74,7 +75,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
     result.getMessage should equal("'someId: too many arguments: 11")
   }
 
-  it should "produce a failed Future which contains a TypeException if FunctionInfo's return type is not Action[AnyContent]" in {
+  it should "fail with a ClassCaseException if FunctionInfo's return type is not Action[AnyContent]" in {
     /*
       TODO wrapping the ClassCastException inside the failed Future would be preferred to the raw exception,
       even better: enforce the usage of functions which return Action[AnyContent] through the type system
@@ -158,6 +159,15 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
     leafOpsImpl.values(info, args).right.value should equal(Seq("hello", 1d))
   }
 
+  it should "extract the Arg values if there are more args then types" in {
+    def fnc(s: String, d: Double) = s + d
+
+    val info = FunctionInfo(fnc _, ("s", "java.lang.String") ::("d", "scala.Double") :: Nil)
+    val args = Seq(Arg("s", "hello"), Arg("d", 1d), Arg("i", 1))
+
+    leafOpsImpl.values(info, args).right.value should equal(Seq("hello", 1d))
+  }
+
   it should "yield an ArgError if the types do not match" in {
     def fnc(s: String, d: Double) = s + d
 
@@ -188,6 +198,92 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
     leafOpsImpl.values(info, args).left.value.msg should equal(
       "'d:scala.Double' not found in Arguments(s:java.lang.String)"
     )
+  }
+
+  "LeafTools#scalaClassNameFor" should "return the classname for Int" in {
+    val name = leafOpsImpl.scalaClassNameFor(1)
+    name should equal("scala.Int")
+  }
+
+  it should "return the classname for String" in {
+    val name = leafOpsImpl.scalaClassNameFor("123")
+    name should equal("java.lang.String")
+  }
+
+  it should "return the classname for Double" in {
+    val name = leafOpsImpl.scalaClassNameFor(1d)
+    name should equal("scala.Double")
+  }
+
+  it should "return the classname for Float" in {
+    val name = leafOpsImpl.scalaClassNameFor(1f)
+    name should equal("scala.Float")
+  }
+
+  it should "return the classname for Long" in {
+    val name = leafOpsImpl.scalaClassNameFor(1l)
+    name should equal("scala.Long")
+  }
+
+  it should "return the classname for Short" in {
+    val name = leafOpsImpl.scalaClassNameFor(1.toShort)
+    name should equal("scala.Short")
+  }
+
+  it should "return the classname for Byte" in {
+    val name = leafOpsImpl.scalaClassNameFor(1.toByte)
+    name should equal("scala.Byte")
+  }
+
+  it should "return the classname for Boolean" in {
+    val name = leafOpsImpl.scalaClassNameFor(true)
+    name should equal("scala.Boolean")
+  }
+
+  it should "return the classname for Char" in {
+    val name = leafOpsImpl.scalaClassNameFor('a')
+    name should equal("scala.Char")
+  }
+
+  it should "return the classname for Symbol" in {
+    val name = leafOpsImpl.scalaClassNameFor('someSymbol)
+    name should equal("scala.Symbol")
+  }
+
+  it should "return 'undefined' for any local class without a canonical name" in {
+    case class Test(name: String)
+    val name = leafOpsImpl.scalaClassNameFor(Test("yo"))
+    name should equal("undefined")
+  }
+
+  case class Test2(name: String)
+  it should "return the classname for any custom class" in {
+    val name = leafOpsImpl.scalaClassNameFor(Test2("yo"))
+    name should equal("org.splink.raven.LeafToolsTest.Test2")
+  }
+
+  it should "return the Option classname Some[_]" in {
+    val name = leafOpsImpl.scalaClassNameFor(Option("yo"))
+    name should equal("scala.Option")
+  }
+
+  it should "return the Option classname for None" in {
+    val name = leafOpsImpl.scalaClassNameFor(None)
+    name should equal("scala.Option")
+  }
+
+  "LeafTools#eitherSeq" should "convert the whole Seq if there are no Left" in {
+    val xs = Seq(Right("One"), Right("Two"), Right("Three"))
+
+    val result = leafOpsImpl.eitherSeq(xs)
+    result should equal(Right(Seq("One", "Two", "Three")))
+  }
+
+  it should "produce the last Left if the given Seq contains one" in {
+    val xs = Seq(Right("One"), Left("Oops"), Left("Oops2"), Right("four"))
+
+    val result = leafOpsImpl.eitherSeq(xs)
+    result should equal(Left("Oops2"))
   }
 
 }

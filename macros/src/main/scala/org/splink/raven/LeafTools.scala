@@ -104,7 +104,7 @@ trait LeafToolsImpl extends LeafTools {
       }
     }
 
-    def scalaClassNameFor(v: Any) = (v match {
+    def scalaClassNameFor(v: Any) = Option((v match {
       case x: Int => Int.getClass
       case x: Double => Double.getClass
       case x: Float => Float.getClass
@@ -113,12 +113,14 @@ trait LeafToolsImpl extends LeafTools {
       case x: Byte => Byte.getClass
       case x: Boolean => Boolean.getClass
       case x: Char => Char.getClass
+      case x: Some[_] => Option.getClass
+      case None => Option.getClass
       case x: Any => x.getClass
-    }).getCanonicalName.replaceAll("\\$", "")
+    }).getCanonicalName).map(_.replaceAll("\\$", "")).getOrElse("undefined")
 
-    def eitherSeq[A, B](e: Seq[Either[A, B]]) =
+    def eitherSeq[A, B](e: Seq[Either[A, B]]): Either[A, Seq[B]] =
       e.foldRight(Right(Seq.empty): Either[A, Seq[B]]) {
-        (e, acc) => for (xs <- acc.right; x <- e.right) yield xs.+:(x)
+        (next, acc) => for (xs <- acc.right; x <- next.right) yield xs.+:(x)
       }
   }
 

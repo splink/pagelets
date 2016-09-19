@@ -48,6 +48,10 @@ class HomeController @Inject()(c: BricksController)(implicit m: Materializer, e:
     }
   }
 
+  def optional(o: Option[String]) = Action {
+    Ok(o.getOrElse("optional.none"))
+  }
+
   def pagelet2(s: String) = Action { implicit request =>
     Ok(s)
     throw new RuntimeException("Ups")
