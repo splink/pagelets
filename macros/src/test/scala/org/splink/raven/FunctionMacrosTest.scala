@@ -1,17 +1,18 @@
 package org.splink.raven
 import org.scalatest._
 import org.splink.raven.FunctionMacros._
+import play.api.mvc.{Results, Action}
 
 class FunctionMacrosTest extends FlatSpec with Matchers {
 
   object TestFunctions {
     case class Complex(s: String)
 
-    def f1 = "f1()"
-    def f2(s: String) = s"f2($s)"
-    def f3(s: String, i: Int) = s"f2($s, $i)"
-    def f4(c: Complex) = s"f4($c)"
-    val f5: (String, Int) => String = (s: String, i: Int) => s"f5($s)"
+    def f1 = Action(Results.Ok("f1()"))
+    def f2(s: String) = Action(Results.Ok(s"f2($s)"))
+    def f3(s: String, i: Int) = Action(Results.Ok(s"f2($s, $i)"))
+    def f4(c: Complex) = Action(Results.Ok(s"f4($c)"))
+    val f5: (String, Int) => Action[_] = (s: String, i: Int) => Action(Results.Ok(s"f5($s)"))
   }
 
   "A function without parameters" should "not yield any types" in {

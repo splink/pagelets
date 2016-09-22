@@ -75,10 +75,10 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
     result.getMessage should equal("'someId: too many arguments: 11")
   }
 
-  it should "fail with a ClassCaseException if FunctionInfo's return type is not Action[AnyContent]" in {
+  it should "fail with a ClassCastException if FunctionInfo's return type is not Action[AnyContent]" in {
     /*
-      TODO wrapping the ClassCastException inside the failed Future would be preferred to the raw exception,
-      even better: enforce the usage of functions which return Action[AnyContent] through the type system
+      This should not happen when FunctionMacros is used. FunctionMacros raises a compile error if the
+      supplied function which is converted to FunctionInfo does not return Action[_]
       */
     def fnc = "hello"
     val info = FunctionInfo(fnc _, Nil)
