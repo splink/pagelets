@@ -14,7 +14,7 @@ class ResultToolsTest extends FlatSpec with Matchers with ScalaFutures {
 
   val result = Result(ResponseHeader(200), HttpEntity.NoEntity)
 
-  "ResultTools.withJavaScript" should "add one Javascript to the result headers" in {
+  "ResultTools#withJavaScript" should "add one Javascript to the result headers" in {
     val newResult = result.withJavascript(Javascript("some.js"))
 
     newResult.header.headers should contain(Javascript.name -> "some.js")
@@ -26,7 +26,7 @@ class ResultToolsTest extends FlatSpec with Matchers with ScalaFutures {
     newResult.header.headers should contain(Javascript.name -> "some.js,some-more.js")
   }
 
-  "ResultTools.withJavaScriptTop" should "add one Javascript to the result headers" in {
+  "ResultTools#withJavaScriptTop" should "add one Javascript to the result headers" in {
     val newResult = result.withJavascriptTop(Javascript("some.js"))
 
     newResult.header.headers should contain(Javascript.nameTop -> "some.js")
@@ -38,7 +38,7 @@ class ResultToolsTest extends FlatSpec with Matchers with ScalaFutures {
     newResult.header.headers should contain(Javascript.nameTop -> "some.js,some-more.js")
   }
 
-  "ResultTools.withCss" should "add one Css to the result headers" in {
+  "ResultTools#withCss" should "add one Css to the result headers" in {
     val newResult = result.withCss(Css("some.css"))
 
     newResult.header.headers should contain(Css.name -> "some.css")
@@ -50,7 +50,7 @@ class ResultToolsTest extends FlatSpec with Matchers with ScalaFutures {
     newResult.header.headers should contain(Css.name -> "some.css,some-more.css")
   }
 
-  "ResultTools.withMetaTags" should "add one MetaTag to the result headers" in {
+  "ResultTools#withMetaTags" should "add one MetaTag to the result headers" in {
     val newResult = result.withMetaTags(MetaTag("some", "tag"))
 
     newResult.header.headers.get(MetaTag.name).get should startWith("rO0ABXNyABhvcmcuc3BsaW5r")

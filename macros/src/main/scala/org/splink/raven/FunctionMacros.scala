@@ -7,7 +7,7 @@ import scala.annotation.implicitNotFound
 import scala.language.experimental.macros
 import scala.reflect.macros._
 
-case class FunctionInfo[T](fnc: T, types: List[(String, String)])
+case class FunctionInfo[T](fnc: T, types: List[(String, String)] = Nil)
 trait Fnc[T]
 
 object FunctionMacros {
