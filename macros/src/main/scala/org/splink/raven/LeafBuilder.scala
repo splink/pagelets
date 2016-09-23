@@ -46,7 +46,7 @@ trait LeafBuilderImpl extends LeafBuilder {
           }
         } match {
           case Failure(t) =>
-            log.warn(s"$requestId Exception in main$s pagelet $id '${messageFor(t)}'")
+            log.warn(s"$requestId Exception in $s pagelet $id '${messageFor(t)}'")
             fallbackFnc(args, t)
           case Success(result) => result
         }

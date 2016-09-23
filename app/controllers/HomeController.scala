@@ -15,6 +15,7 @@ import scala.concurrent.Future
 @Singleton
 class HomeController @Inject()(c: BricksController)(implicit m: Materializer, e: Environment) extends Controller  {
   import c._
+  val log = play.api.Logger(getClass).logger
 
   def plan(r: RequestHeader) = Tree('root, Seq(
     Tree('first, Seq(
@@ -34,7 +35,7 @@ class HomeController @Inject()(c: BricksController)(implicit m: Materializer, e:
   def resourceFor(fingerprint: String) = ResourceAction(fingerprint)
 
   def index = PageAction(errorTemplate)("Index", plan, Arg("s", "Hello!")) { (request, page) =>
-    println(visualize(plan(request)))
+    log.info(visualize(plan(request)))
     mainTemplate(page)
   }
 
