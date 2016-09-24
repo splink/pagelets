@@ -6,7 +6,7 @@ import play.api.{Environment, Logger, Mode}
 import scala.io.Source
 
 object Resources {
-  private val log = Logger(Resources.getClass).logger
+  private val log = Logger("Resources").logger
 
   private val NewLine = "\n"
   private val BasePath = "public/"

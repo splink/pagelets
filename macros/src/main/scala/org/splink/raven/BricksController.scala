@@ -52,8 +52,8 @@ trait BricksController {
 }
 
 trait BricksControllerImpl extends BricksController with Controller {
-  self: Mason with TreeTools with ResultTools with ResourceActions with Visualizer =>
-  val log = Logger(getClass).logger
+  self: PageBuilder with TreeTools with ResultTools with ResourceActions with Visualizer =>
+  val log = Logger(getClass.getSimpleName).logger
 
   override def visualize(p: Part) = visualizer.visualize(p)
 
@@ -63,7 +63,7 @@ trait BricksControllerImpl extends BricksController with Controller {
   override def PageAction[T: Writeable](errorTemplate: ErrorPage => T)(
     title: String, plan: RequestHeader => Part, args: Arg*)(template: (Request[_], Page) => T)(
                                          implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
-    mason.build(plan(request), args: _*).map { result =>
+    builder.build(plan(request), args: _*).map { result =>
       Ok(template(request, mkPage(title, result))).withCookies(result.cookies: _*)
     }.recover {
       case e: PageletException =>

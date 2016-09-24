@@ -22,7 +22,7 @@ trait ResultToolsImpl extends ResultTools {
   override implicit def resultOps(result: Result): ResultOps = new ResultOpsImpl(result)
 
   class ResultOpsImpl(result: Result) extends ResultOps {
-    val log = Logger(getClass).logger
+    val log = Logger("ResultTools").logger
 
     override def withJavascript(js: Javascript*) = helper(js.map(_.src), Javascript.name)
 

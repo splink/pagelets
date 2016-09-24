@@ -26,7 +26,7 @@ trait LeafToolsImpl extends LeafTools {
   class LeafOpsImpl(leaf: Leaf[_, _]) extends LeafOps {
     type R = Action[AnyContent]
 
-    val log = play.api.Logger(getClass).logger
+    val log = play.api.Logger("LeafTools").logger
 
     case class ArgError(msg: String)
 

@@ -1,7 +1,7 @@
 package org.splink.raven
 
 class Assembly extends BricksControllerImpl
-  with MasonImpl
+  with PageBuilderImpl
   with LeafBuilderImpl
   with LeafToolsImpl
   with TreeToolsImpl

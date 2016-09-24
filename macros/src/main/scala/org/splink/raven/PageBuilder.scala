@@ -5,21 +5,21 @@ import play.api.mvc.{AnyContent, Request}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait Mason {
-  def mason: MasonService
+trait PageBuilder {
+  def builder: PageBuilderService
 
-  trait MasonService {
+  trait PageBuilderService {
     def build(pagelet: Part, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult]
   }
 }
 
-trait MasonImpl extends Mason {
+trait PageBuilderImpl extends PageBuilder {
   self: LeafBuilder =>
 
-  override val mason = new MasonService {
-    val log = play.api.Logger(getClass).logger
+  override val builder = new PageBuilderService {
+    val log = play.api.Logger(getClass.getSimpleName).logger
 
-    override def build(pagelet: Part, args: Arg*)(
+    override def build(part: Part, args: Arg*)(
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
       val requestId = RequestId.mkRequestId
 
@@ -35,11 +35,11 @@ trait MasonImpl extends Mason {
             }
 
           case l: Leaf[_, _] =>
-            val isRoot = pagelet.id == l.id
+            val isRoot = part.id == l.id
             leafBuilderService.build(l, args, requestId, isRoot)
         }
 
-      rec(pagelet)
+      rec(part)
     }
   }
 
