@@ -9,18 +9,18 @@ import scala.util.Try
 object TwirlConversions {
   private val log = Logger("TwirlConversions").logger
 
-  def combine(results: Seq[BrickResult])(template: Seq[Html] => Html) = {
+  def combine(results: Seq[PageletResult])(template: Seq[Html] => Html) = {
     val htmls = results.map(r => Html(r.body))
     val htmlString = template(htmls).body
     combineAssets(results)(htmlString)
   }
 
-  private def combineAssets(results: Seq[BrickResult]): (String) => BrickResult = {
+  private def combineAssets(results: Seq[PageletResult]): (String) => PageletResult = {
     val (js, jsTop, css, cookies, metaTags) = results.foldLeft(
       Set.empty[Javascript], Set.empty[Javascript], Set.empty[Css], Seq.empty[Cookie], Set.empty[MetaTag]) { (acc, next) =>
       (acc._1 ++ next.js, acc._2 ++ next.jsTop, acc._3 ++ next.css, acc._4 ++ next.cookies, acc._5 ++ next.metaTags)
     }
-    BrickResult(_, js, jsTop, css, cookies, metaTags)
+    PageletResult(_, js, jsTop, css, cookies, metaTags)
   }
 
   implicit def adapt[A, B](f: A => B): Seq[A] => B =

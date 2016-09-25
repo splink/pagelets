@@ -40,21 +40,21 @@ trait ResultToolsImpl extends ResultTools {
       result.withHeaders(s"$id" -> elems.mkString(","))
   }
 
-  implicit val ct: ContentTypeOf[BrickResult] =
-    ContentTypeOf[BrickResult](Some(ContentTypes.HTML))
+  implicit val ct: ContentTypeOf[PageletResult] =
+    ContentTypeOf[PageletResult](Some(ContentTypes.HTML))
 
-  implicit def writeableOf(implicit codec: Codec, ct: ContentTypeOf[BrickResult]): Writeable[BrickResult] =
+  implicit def writeableOf(implicit codec: Codec, ct: ContentTypeOf[PageletResult]): Writeable[PageletResult] =
     Writeable(result => codec.encode(result.body.trim))
 }
 
-object BrickResult {
-  val empty = BrickResult("")
+object PageletResult {
+  val empty = PageletResult("")
 }
 
-case class BrickResult(body: String,
-                       js: Set[Javascript] = Set.empty,
-                       jsTop: Set[Javascript] = Set.empty,
-                       css: Set[Css] = Set.empty,
-                       cookies: Seq[Cookie] = Seq.empty,
-                       metaTags: Set[MetaTag] = Set.empty)
+case class PageletResult(body: String,
+                         js: Set[Javascript] = Set.empty,
+                         jsTop: Set[Javascript] = Set.empty,
+                         css: Set[Css] = Set.empty,
+                         cookies: Seq[Cookie] = Seq.empty,
+                         metaTags: Set[MetaTag] = Set.empty)
 

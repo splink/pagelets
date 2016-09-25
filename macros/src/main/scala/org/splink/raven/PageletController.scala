@@ -27,15 +27,15 @@ case class ErrorPage(language: String,
 
 
 trait BricksController {
-  def visualize(p: Part): String
+  def visualize(p: Pagelet): String
 
   def ResourceAction(fingerprint: String, validFor: Duration = 365.days): Action[AnyContent]
 
   def PageAction[T: Writeable](errorTemplate: ErrorPage => T)(
-    title: String, plan: RequestHeader => Part, args: Arg*)(template: (Request[_], Page) => T)(
+    title: String, plan: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], Page) => T)(
                                 implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
 
-  def PagePartAction[T: Writeable](errorTemplate: ErrorPage => T)(
+  def PageletAction[T: Writeable](errorTemplate: ErrorPage => T)(
     plan: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
                                     implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
 
@@ -55,13 +55,13 @@ trait BricksControllerImpl extends BricksController with Controller {
   self: PageBuilder with TreeTools with ResultTools with ResourceActions with Visualizer =>
   val log = Logger(getClass.getSimpleName).logger
 
-  override def visualize(p: Part) = visualizer.visualize(p)
+  override def visualize(p: Pagelet) = visualizer.visualize(p)
 
   override def ResourceAction(fingerprint: String, validFor: Duration = 365.days) =
     resourceService.ResourceAction(fingerprint, validFor)
 
   override def PageAction[T: Writeable](errorTemplate: ErrorPage => T)(
-    title: String, plan: RequestHeader => Part, args: Arg*)(template: (Request[_], Page) => T)(
+    title: String, plan: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], Page) => T)(
                                          implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
     builder.build(plan(request), args: _*).map { result =>
       Ok(template(request, mkPage(title, result))).withCookies(result.cookies: _*)
@@ -72,21 +72,21 @@ trait BricksControllerImpl extends BricksController with Controller {
     }
   }
 
-  override def PagePartAction[T: Writeable](errorTemplate: ErrorPage => T)(
+  override def PageletAction[T: Writeable](errorTemplate: ErrorPage => T)(
     plan: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
                                              implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { request =>
-    plan(request).find(id).map { part =>
+    plan(request).find(id).map { p =>
       val args = request.queryString.map { case (key, values) =>
         Arg(key, values.head)
       }.toSeq
 
-      PageAction(errorTemplate)(id.name, _ => part, args: _*)(template).apply(request)
+      PageAction(errorTemplate)(id.name, _ => p, args: _*)(template).apply(request)
     }.getOrElse {
       Future.successful(BadRequest(s"'$id' does not exist"))
     }
   }
 
-  def mkPage(title: String, result: BrickResult)(implicit r: RequestHeader, env: Environment) = {
+  def mkPage(title: String, result: PageletResult)(implicit r: RequestHeader, env: Environment) = {
     val jsFinger = Resources.update(result.js)
     val jsTopFinger = Resources.update(result.jsTop)
     val cssFinger = Resources.update(result.css)

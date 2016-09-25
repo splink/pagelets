@@ -39,7 +39,7 @@ class HomeController @Inject()(c: BricksController)(implicit m: Materializer, e:
     mainTemplate(page)
   }
 
-  def part(id: Symbol) = PagePartAction(errorTemplate)(plan, id) { (request, page) =>
+  def part(id: Symbol) = PageletAction(errorTemplate)(plan, id) { (request, page) =>
     mainTemplate(page)
   }
 

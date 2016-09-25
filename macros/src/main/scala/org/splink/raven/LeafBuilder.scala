@@ -13,7 +13,7 @@ trait LeafBuilder {
 
   trait LeafBuilderService {
     def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId, isRoot: Boolean)(
-      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult]
+      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult]
   }
 }
 
@@ -26,8 +26,8 @@ trait LeafBuilderImpl extends LeafBuilder {
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
 
       def execute(id: Symbol, isFallback: Boolean,
-                  fnc: Seq[Arg] => Future[BrickResult],
-                  fallbackFnc: (Seq[Arg], Throwable) => Future[BrickResult]) = {
+                  fnc: Seq[Arg] => Future[PageletResult],
+                  fallbackFnc: (Seq[Arg], Throwable) => Future[PageletResult]) = {
 
         def messageFor(t: Throwable) = if (Option(t.getMessage).isDefined) t.getMessage else "No message"
 
@@ -63,7 +63,7 @@ trait LeafBuilderImpl extends LeafBuilder {
         fallbackFnc = (args, t) =>
           execute(leaf.id, isFallback = true, buildFallback,
             fallbackFnc = (args, t) =>
-              if (isRoot) Future.failed(t) else Future.successful(BrickResult.empty)
+              if (isRoot) Future.failed(t) else Future.successful(PageletResult.empty)
           ))
     }
   }

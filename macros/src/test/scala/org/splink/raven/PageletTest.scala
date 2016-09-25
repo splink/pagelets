@@ -2,7 +2,7 @@ package org.splink.raven
 
 import org.scalatest.{Matchers, FlatSpec}
 
-class PartTest extends FlatSpec with Matchers {
+class PageletTest extends FlatSpec with Matchers {
 
   "Leaf#equals" should "identify equal Leaf nodes" in {
     val fnc = () => "someFunction"

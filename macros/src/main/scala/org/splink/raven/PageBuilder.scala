@@ -9,7 +9,7 @@ trait PageBuilder {
   def builder: PageBuilderService
 
   trait PageBuilderService {
-    def build(pagelet: Part, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult]
+    def build(pagelet: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult]
   }
 }
 
@@ -19,11 +19,11 @@ trait PageBuilderImpl extends PageBuilder {
   override val builder = new PageBuilderService {
     val log = play.api.Logger(getClass.getSimpleName).logger
 
-    override def build(part: Part, args: Arg*)(
+    override def build(p: Pagelet, args: Arg*)(
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
       val requestId = RequestId.create
 
-      def rec(p: Part): Future[BrickResult] =
+      def rec(p: Pagelet): Future[PageletResult] =
         p match {
           case t@Tree(id, children) =>
             val start = System.currentTimeMillis()
@@ -35,11 +35,11 @@ trait PageBuilderImpl extends PageBuilder {
             }
 
           case l: Leaf[_, _] =>
-            val isRoot = part.id == l.id
+            val isRoot = p.id == l.id
             leafBuilderService.build(l, args, requestId, isRoot)
         }
 
-      rec(part)
+      rec(p)
     }
   }
 

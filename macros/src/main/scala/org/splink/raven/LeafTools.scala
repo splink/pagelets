@@ -13,7 +13,7 @@ trait LeafTools {
 
   trait LeafOps {
     def execute(fi: FunctionInfo[_], args: Seq[Arg])(
-      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult]
+      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult]
   }
 
 }
@@ -31,7 +31,7 @@ trait LeafToolsImpl extends LeafTools {
     case class ArgError(msg: String)
 
     override def execute(fi: FunctionInfo[_], args: Seq[Arg])(
-      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult] =
+      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
       values(fi, args).fold(
         err => Future.failed(TypeException(s"${leaf.id}: ${err.msg}")), {
           case Nil =>
@@ -62,7 +62,7 @@ trait LeafToolsImpl extends LeafTools {
       )
 
     implicit def transform(action: Action[AnyContent])(
-      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[BrickResult] =
+      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
       action(r).map { result =>
 
         def header(key: String) = result.header.headers.get(key)
@@ -86,7 +86,7 @@ trait LeafToolsImpl extends LeafTools {
         (result.body.consumeData, js, jsTop, css, cookies, metaTags)
       }.flatMap { case (eventualByteString, js, jsTop, css, cookies, metaTags) =>
         eventualByteString.map { byteString =>
-          BrickResult(byteString.utf8String, js, jsTop, css, cookies, metaTags)
+          PageletResult(byteString.utf8String, js, jsTop, css, cookies, metaTags)
         }
       }
 

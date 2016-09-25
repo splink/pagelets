@@ -65,7 +65,7 @@ class ResultToolsTest extends FlatSpec with Matchers with ScalaFutures {
   "ResultToolsImpl provides an implicit Writable which" should "permit an Action to return BrickResult as Result" in {
     class TestController extends Controller {
       def index = Action {
-        Ok(BrickResult("Body"))
+        Ok(PageletResult("Body"))
       }
     }
 

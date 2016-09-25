@@ -7,8 +7,8 @@ trait TreeTools {
 
   trait TreeOps {
     def skip(id: Symbol): Tree
-    def replace(id: Symbol, other: Part): Tree
-    def find(id: Symbol): Option[Part]
+    def replace(id: Symbol, other: Pagelet): Tree
+    def find(id: Symbol): Option[Pagelet]
   }
 
 }
@@ -18,8 +18,8 @@ trait TreeToolsImpl extends TreeTools {
 
   class TreeOpsImpl(tree: Tree) extends TreeOps {
 
-    override def find(id: Symbol): Option[Part] = {
-      def rec(p: Part): Option[Part] = p match {
+    override def find(id: Symbol): Option[Pagelet] = {
+      def rec(p: Pagelet): Option[Pagelet] = p match {
         case _ if p.id == id => Some(p)
         case Tree(_, children_) => children_.flatMap(rec).headOption
         case _ => None
@@ -32,8 +32,8 @@ trait TreeToolsImpl extends TreeTools {
       replace(id, Leaf(id, FunctionInfo(f _, Nil)))
     }
 
-    override def replace(id: Symbol, other: Part): Tree = {
-      def rec(p: Part): Part = p match {
+    override def replace(id: Symbol, other: Pagelet): Tree = {
+      def rec(p: Pagelet): Pagelet = p match {
         case b@Tree(_, childs) if childs.exists(_.id == id) =>
           val idx = childs.indexWhere(_.id == id)
           b.copy(children = childs.updated(idx, other))
@@ -41,8 +41,8 @@ trait TreeToolsImpl extends TreeTools {
         case b@Tree(_, childs) =>
           b.copy(children = childs.map(rec))
 
-        case part =>
-          part
+        case p =>
+          p
       }
 
       if (id == tree.id) {

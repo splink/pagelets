@@ -5,15 +5,15 @@ trait Visualizer {
   def visualizer: VisualizerService
 
   trait VisualizerService {
-    def visualize(p: Part): String
+    def visualize(p: Pagelet): String
   }
 
 }
 
 trait VisualizerImpl extends Visualizer {
   override val visualizer = new VisualizerService {
-    override def visualize(p: Part) = {
-      def rec(p: Part, layer: Int = 0): String = p match {
+    override def visualize(p: Pagelet) = {
+      def rec(p: Pagelet, layer: Int = 0): String = p match {
         case t: Tree =>
           val a = space(layer) + t.id + "\n"
           a + t.children.map(c => rec(c, layer + 1)).mkString
