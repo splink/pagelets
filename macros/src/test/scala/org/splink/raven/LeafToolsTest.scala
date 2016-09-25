@@ -3,6 +3,7 @@ package org.splink.raven
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.{Millis, Span}
 import org.scalatest.{EitherValues, FlatSpec, Matchers}
 import org.splink.raven.Exceptions.TypeException
 import play.api.mvc.{Action, Cookie, Results}
@@ -15,6 +16,8 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
   implicit val request = FakeRequest()
+
+  override implicit def patienceConfig = PatienceConfig(Span(250, Millis), Span(50, Millis))
 
   val tools = new LeafToolsImpl with SerializerImpl
 
@@ -133,7 +136,6 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
       val serializer = new SerializerImpl {}.serializer
       val s1 = serializer.serialize(MetaTag("key1", "value1")).right.get
       val s2 = serializer.serialize(MetaTag("key2", "value2")).right.get
-
       Results.Ok(s).withHeaders(MetaTag.name -> s"$s1,$s2,$s2")
     }
 
