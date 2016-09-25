@@ -4,12 +4,11 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FlatSpec, Matchers}
-import play.api.libs.concurrent.Promise
 import play.api.mvc.{Action, AnyContent, Request, Results}
 import play.api.test.FakeRequest
-import scala.concurrent.duration._
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class PageBuilderTest extends FlatSpec with Matchers with ScalaFutures {

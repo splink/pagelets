@@ -21,7 +21,7 @@ trait PageBuilderImpl extends PageBuilder {
 
     override def build(part: Part, args: Arg*)(
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
-      val requestId = RequestId.mkRequestId
+      val requestId = RequestId.create
 
       def rec(p: Part): Future[BrickResult] =
         p match {
