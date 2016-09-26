@@ -6,64 +6,90 @@ import play.api.{Environment, Logger, Mode}
 import scala.io.Source
 
 object Resources {
-  private val log = Logger("Resources").logger
+  private val impl = new ResourceProviderImpl(Map.empty, Map.empty)
 
-  private val NewLine = "\n"
-  private val BasePath = "public/"
-  private var cache = Map[Fingerprint, Content]()
-  private var itemCache = Map[Fingerprint, Content]()
+  def apply(): ResourceProvider = impl
+
+  trait ResourceProvider {
+    def contains(fingerprint: Fingerprint): Boolean
+
+    def contentFor(fingerprint: Fingerprint): Option[ResourceContent]
+
+    def update[T <: Resource](resources: Set[T])(implicit e: Environment): Option[Fingerprint]
+
+    def clear(): Unit
+  }
+
+  class ResourceProviderImpl(
+                              var cache: Map[Fingerprint, ResourceContent],
+                              var itemCache: Map[Fingerprint, ResourceContent]) extends ResourceProvider {
+    val log = Logger("Resources").logger
+
+    val BasePath = "public/"
+
+    override def contentFor(fingerprint: Fingerprint) = cache.get(fingerprint)
+
+    override def contains(fingerprint: Fingerprint) = cache.contains(fingerprint)
+
+    override def clear() = {
+      cache = cache.empty
+      itemCache = cache.empty
+    }
+
+    override def update[T <: Resource](resources: Set[T])(implicit e: Environment) = synchronized {
+      def fingerprint(c: ResourceContent) = Fingerprint(DigestUtils.md5Hex(c.body))
+      def mk(assets: Seq[Resource]) = {
+        if (assets.nonEmpty) {
+          val content = assemble(assets)
+          val hash = fingerprint(content)
+          cache = cache + (hash -> content)
+          Some(hash)
+        } else None
+      }
+
+      mk(resources.toSeq)
+    }
+
+    def assemble(resources: Seq[Resource])(implicit e: Environment) = synchronized {
+      resources.foldLeft(ResourceContent.empty) { (acc, next) =>
+        maybeCachedContent(next).map { content =>
+          acc + content
+        }.getOrElse {
+          load(next).map { content =>
+            itemCache = itemCache + (Fingerprint(next.src) -> content)
+            acc + content
+          }.getOrElse {
+            log.warn(s"Missing ${mimeTypeFor(next)} resource: ${next.src}")
+            acc
+          }
+        }
+      }
+    }
+
+    def maybeCachedContent(resource: Resource)(implicit e: Environment) = for {
+      content <- itemCache.get(Fingerprint(resource.src)) if e.mode == Mode.Prod
+    } yield content
+
+    def load(resource: Resource)(implicit e: Environment) = {
+      log.debug(s"Load resource '${BasePath + resource.src}'")
+      e.resourceAsStream(BasePath + resource.src).map(Source.fromInputStream(_).mkString).map { text =>
+        ResourceContent(text + "\n", mimeTypeFor(resource))
+      }
+    }
+  }
 
   case class Fingerprint(s: String) {
     override def toString = s
   }
 
-  case object Content {
-    val empty = Content("", PlainMimeType)
+  case object ResourceContent {
+    val empty = ResourceContent("", PlainMimeType)
   }
 
-  case class Content(body: String, mimeType: MimeType) {
+  case class ResourceContent(body: String, mimeType: MimeType) {
     override def toString = body
 
-    def +(that: Content) = copy(body = body + that.body, mimeType = that.mimeType)
-  }
-
-  def contentFor(fingerprint: Fingerprint): Option[Content] = cache.get(fingerprint)
-
-  def contains(fingerprint: Fingerprint): Boolean = cache.contains(fingerprint)
-
-  def update[T <: Resource](r: Set[T])(implicit e: Environment) = {
-    def fingerprint(c: Content) = Fingerprint(DigestUtils.md5Hex(c.body))
-    def mk(assets: Seq[Resource]) = {
-      if (assets.nonEmpty) {
-        val content = assemble(assets)
-        val hash = fingerprint(content)
-        cache = cache + (hash -> content)
-        Some(hash)
-      } else None
-    }
-
-    mk(r.toSeq)
-  }
-
-  private def assemble(assets: Seq[Resource])(implicit e: Environment) = synchronized {
-    assets.foldLeft(Content.empty) { (acc, next) =>
-      val maybeContent = for {
-        content <- itemCache.get(Fingerprint(next.src)) if e.mode == Mode.Prod
-      } yield content
-
-      maybeContent.map { content =>
-        acc + content
-      }.getOrElse {
-        log.debug(s"Load resource '${BasePath + next.src}'")
-        val text = e.resourceAsStream(BasePath + next.src).map(Source.fromInputStream(_).mkString).getOrElse {
-          log.warn(s"Missing ${mimeTypeFor(next)} resource: ${next.src}")
-          ""
-        }
-        val content = Content(text + NewLine, mimeTypeFor(next))
-        itemCache = itemCache + (Fingerprint(next.src) -> content)
-        acc + content
-      }
-    }
+    def +(that: ResourceContent) = copy(body = body + that.body, mimeType = that.mimeType)
   }
 
   sealed trait MimeType {

@@ -87,9 +87,9 @@ trait BricksControllerImpl extends BricksController with Controller {
   }
 
   def mkPage(title: String, result: PageletResult)(implicit r: RequestHeader, env: Environment) = {
-    val jsFinger = Resources.update(result.js)
-    val jsTopFinger = Resources.update(result.jsTop)
-    val cssFinger = Resources.update(result.css)
+    val jsFinger = Resources().update(result.js)
+    val jsTopFinger = Resources().update(result.jsTop)
+    val cssFinger = Resources().update(result.css)
 
     Page(request2lang.language,
       Head(title, result.metaTags, jsTopFinger, cssFinger),

@@ -20,7 +20,7 @@ trait ResourceActions {
 trait ResourceActionsImpl extends ResourceActions {
   override val resourceService = new ResourceService {
     override def ResourceAction(fingerprint: String, validFor: Duration = 365.days) = EtagAction { request =>
-      Resources.contentFor(Fingerprint(fingerprint)).map { content =>
+      Resources().contentFor(Fingerprint(fingerprint)).map { content =>
         Ok(content.body).as(content.mimeType.name).withHeaders(CacheHeaders(fingerprint, validFor): _*)
       }.getOrElse {
         BadRequest
@@ -29,7 +29,7 @@ trait ResourceActionsImpl extends ResourceActions {
 
     def EtagAction(f: Request[AnyContent] => Result) = Action { request =>
       request.headers.get(IF_NONE_MATCH).map { etag =>
-        if (Resources.contains(Fingerprint(etag))) NotModified else f(request)
+        if (Resources().contains(Fingerprint(etag))) NotModified else f(request)
       }.getOrElse {
         f(request)
       }
