@@ -34,7 +34,7 @@ class PageletTest extends FlatSpec with Matchers {
     a should not equal b
   }
 
-  "Tree#equals" should "identify equal Tree nodes when nested" in {
+  it should "identify equal Tree nodes when nested" in {
     val fnc = () => "someFunction"
     val l1 = Leaf('one, FunctionInfo(fnc, Nil))
     val l2 = Leaf('two, FunctionInfo(fnc, Nil))
