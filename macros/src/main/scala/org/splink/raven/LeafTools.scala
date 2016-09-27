@@ -1,10 +1,10 @@
 package org.splink.raven
 
+import scala.language.implicitConversions
 import akka.stream.Materializer
 import org.splink.raven.Exceptions.TypeException
 import play.api.http.HeaderNames
 import play.api.mvc.{Action, AnyContent, Cookies, Request}
-
 import scala.concurrent.{ExecutionContext, Future}
 
 trait LeafTools {

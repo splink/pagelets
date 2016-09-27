@@ -1,5 +1,6 @@
 package org.splink.raven
 
+import scala.language.implicitConversions
 import play.api.mvc.{Action, Results}
 
 trait TreeTools {
@@ -41,8 +42,8 @@ trait TreeToolsImpl extends TreeTools {
         case b@Tree(_, childs) =>
           b.copy(children = childs.map(rec))
 
-        case p =>
-          p
+        case any =>
+          any
       }
 
       if (id == tree.id) {

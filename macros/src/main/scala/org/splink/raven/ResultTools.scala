@@ -1,5 +1,6 @@
 package org.splink.raven
 
+import scala.language.implicitConversions
 import play.api.Logger
 import play.api.http.{ContentTypeOf, ContentTypes, Writeable}
 import play.api.mvc.{Codec, Cookie, Result}

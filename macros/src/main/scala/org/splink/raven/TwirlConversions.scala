@@ -1,5 +1,6 @@
 package org.splink.raven
 
+import scala.language.implicitConversions
 import play.api.Logger
 import play.api.mvc.Cookie
 import play.twirl.api.Html
