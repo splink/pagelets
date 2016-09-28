@@ -13,11 +13,11 @@ import views.html.{error, wrapper}
 import scala.concurrent.Future
 
 @Singleton
-class HomeController @Inject()(c: BricksController)(implicit m: Materializer, e: Environment) extends Controller  {
+class HomeController @Inject()(c: PageletController)(implicit m: Materializer, e: Environment) extends Controller  {
   import c._
   val log = play.api.Logger(getClass).logger
 
-  def plan(r: RequestHeader) = Tree('root, Seq(
+  def tree(r: RequestHeader) = Tree('root, Seq(
     Tree('first, Seq(
       Leaf('brick1, pagelet1 _).withFallback(fallbackPagelet _),
       Tree('sub, Seq(
@@ -34,12 +34,12 @@ class HomeController @Inject()(c: BricksController)(implicit m: Materializer, e:
 
   def resourceFor(fingerprint: String) = ResourceAction(fingerprint)
 
-  def index = PageAction(errorTemplate)("Index", plan, Arg("s", "Hello!")) { (request, page) =>
-    log.info(visualize(plan(request)))
+  def index = PageAction(errorTemplate)("Index", tree, Arg("s", "Hello!")) { (request, page) =>
+    log.info(visualize(tree(request)))
     mainTemplate(page)
   }
 
-  def part(id: Symbol) = PageletAction(errorTemplate)(plan, id) { (request, page) =>
+  def part(id: Symbol) = PageletAction(errorTemplate)(tree, id) { (request, page) =>
     mainTemplate(page)
   }
 

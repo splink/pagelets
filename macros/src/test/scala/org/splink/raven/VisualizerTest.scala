@@ -18,7 +18,7 @@ class VisualizerTest extends FlatSpec with Matchers {
     ))
   ))
 
-  val visualizer = new VisualizerImpl {}.visualizer
+  val visualizer = new VisualizerImpl {}
 
   "Visualizer#visualize" should "visualize a tree" in {
     visualizer.visualize(tree) should equal(
