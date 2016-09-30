@@ -20,8 +20,8 @@ class ResourceActionsTest extends PlaySpec with BeforeAndAfter {
 
   "ResourceAction" should {
     "return the resource with status Ok for a known fingerprint" in {
-      Resources().update(Set(Javascript("a.js")))
-      val result = actions.ResourceAction("73d5636237ffec432c61a75fe9335015")(request)
+      val print = Resources().update(Set(Javascript("a.js")))
+      val result = actions.ResourceAction(print.get.toString)(request)
 
       status(result) must equal(OK)
       contentType(result) must equal(Some(JsMimeType.name))
@@ -36,17 +36,17 @@ class ResourceActionsTest extends PlaySpec with BeforeAndAfter {
     }
 
     "return headers with etag" in {
-      Resources().update(Set(Javascript("a.js")))
-      val result = actions.ResourceAction("73d5636237ffec432c61a75fe9335015")(request)
+      val print = Resources().update(Set(Javascript("a.js")))
+      val result = actions.ResourceAction(print.get.toString)(request)
 
-      header(HeaderNames.ETAG, result) must equal(Some("73d5636237ffec432c61a75fe9335015"))
+      header(HeaderNames.ETAG, result) must equal(Some(print.get.toString))
     }
 
     "return NotModified if the server holds a resource for the fingerprint in the etag (IF_NONE_MATCH) header" in {
-      Resources().update(Set(Javascript("a.js")))
+      val print = Resources().update(Set(Javascript("a.js")))
 
-      val rwh = request.withHeaders(HeaderNames.IF_NONE_MATCH -> "73d5636237ffec432c61a75fe9335015")
-      val result = actions.ResourceAction("73d5636237ffec432c61a75fe9335015")(rwh)
+      val rwh = request.withHeaders(HeaderNames.IF_NONE_MATCH -> print.get.toString)
+      val result = actions.ResourceAction(print.get.toString)(rwh)
       status(result) must equal(NOT_MODIFIED)
     }
   }

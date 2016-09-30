@@ -59,7 +59,7 @@ trait PageletActionsImpl extends PageletActions {
 
       PageAction(errorTemplate)(id.name, _ => p, args: _*)(template).apply(request)
     }.getOrElse {
-      Future.successful(BadRequest(s"'$id' does not exist"))
+      Future.successful(NotFound(s"$id does not exist"))
     }
   }
 

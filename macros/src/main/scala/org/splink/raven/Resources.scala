@@ -5,6 +5,7 @@ import play.api.{Environment, Logger, Mode}
 
 import scala.io.Source
 
+//TODO running scalatest in parallel shows the flaw in this design. maybe rework to a cake mixin is better
 object Resources {
   private val impl = new ResourceProviderImpl(Map.empty, Map.empty)
 
@@ -37,20 +38,15 @@ object Resources {
     }
 
     override def update[T <: Resource](resources: Set[T])(implicit e: Environment) = synchronized {
-      def fingerprint(c: ResourceContent) = Fingerprint(DigestUtils.md5Hex(c.body))
-      def mk(assets: Seq[Resource]) = {
-        if (assets.nonEmpty) {
-          val content = assemble(assets)
-          val hash = fingerprint(content)
-          cache = cache + (hash -> content)
-          Some(hash)
-        } else None
-      }
-
-      mk(resources.toSeq)
+      if (resources.nonEmpty) {
+        val content = assemble(resources)
+        val hash = Fingerprint(DigestUtils.md5Hex(content.body))
+        cache = cache + (hash -> content)
+        Some(hash)
+      } else None
     }
 
-    def assemble(resources: Seq[Resource])(implicit e: Environment) = synchronized {
+    def assemble[T <: Resource](resources: Set[T])(implicit e: Environment) = {
       resources.foldLeft(ResourceContent.empty) { (acc, next) =>
         maybeCachedContent(next).map { content =>
           acc + content

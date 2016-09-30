@@ -15,7 +15,7 @@ class ResourcesTest extends FlatSpec with Matchers with BeforeAndAfter {
   }
 
   def mkFingerprint = resourceProvider.update(Set(Javascript("a.js"), Javascript("b.js")))
-  val expectedPrint = Fingerprint("4c59af0174a6f1a76779abd4eb83aa07")
+  val expectedPrint = Fingerprint(mkFingerprint.get.toString)
 
   "Resources.update" should "return a fingerprint for a Set of resources" in {
     mkFingerprint shouldBe Some(expectedPrint)
