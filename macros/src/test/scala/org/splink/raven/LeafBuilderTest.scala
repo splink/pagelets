@@ -8,12 +8,12 @@ import org.splink.raven.Exceptions.NoFallbackException
 import play.api.mvc.{Action, Results}
 import play.api.test.FakeRequest
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class LeafBuilderTest extends FlatSpec with Matchers with ScalaFutures {
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
+  implicit val ec = system.dispatcher
   implicit val request = FakeRequest()
 
   def successAction = Action(Results.Ok("action"))

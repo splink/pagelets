@@ -5,11 +5,10 @@ import org.scalatestplus.play._
 import org.splink.raven.Resources.JsMimeType
 import play.api.Environment
 import play.api.http.HeaderNames
-import play.api.mvc.Results
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
-class ResourceActionsTest extends PlaySpec with Results with BeforeAndAfter {
+class ResourceActionsTest extends PlaySpec with BeforeAndAfter {
   val actions = new ResourceActionsImpl {}
 
   implicit val env = Environment.simple()

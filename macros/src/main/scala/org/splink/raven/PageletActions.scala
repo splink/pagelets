@@ -44,7 +44,7 @@ trait PageletActionsImpl extends PageletActions {
       Ok(template(request, mkPage(title, result))).withCookies(result.cookies: _*)
     }.recover {
       case e: PageletException =>
-        log.error(s"error $e")
+        log.error(s"$e")
         InternalServerError(errorTemplate(ErrorPage(request2lang.language, title, e)))
     }
   }

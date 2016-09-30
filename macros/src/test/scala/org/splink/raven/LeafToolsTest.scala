@@ -9,12 +9,11 @@ import org.splink.raven.Exceptions.TypeException
 import play.api.mvc.{Action, Cookie, Results}
 import play.api.test.FakeRequest
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
 class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with EitherValues {
 
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
+  implicit val ec = system.dispatcher
   implicit val request = FakeRequest()
 
   override implicit def patienceConfig = PatienceConfig(Span(250, Millis), Span(50, Millis))

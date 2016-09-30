@@ -6,7 +6,6 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FlatSpec, Matchers}
 import play.api.mvc.{Results, Action, AnyContent}
 import play.api.test.FakeRequest
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class TreeToolsTest extends FlatSpec with Matchers with ScalaFutures {
 
@@ -14,6 +13,7 @@ class TreeToolsTest extends FlatSpec with Matchers with ScalaFutures {
 
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
+  implicit val ec = system.dispatcher
 
   val action = () => Action(Results.Ok("action"))
 

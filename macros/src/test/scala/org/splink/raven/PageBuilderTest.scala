@@ -7,7 +7,6 @@ import org.scalatest.{FlatSpec, Matchers}
 import play.api.mvc.{Action, AnyContent, Request, Results}
 import play.api.test.FakeRequest
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -17,6 +16,7 @@ class PageBuilderTest extends FlatSpec with Matchers with ScalaFutures {
 
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
+  implicit val ec = system.dispatcher
   implicit val request = FakeRequest()
 
   def action(s: String) = () => Action(Results.Ok(s))

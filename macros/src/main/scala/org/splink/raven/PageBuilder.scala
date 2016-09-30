@@ -9,7 +9,8 @@ trait PageBuilder {
   def builder: PageBuilderService
 
   trait PageBuilderService {
-    def build(pagelet: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult]
+    def build(pagelet: Pagelet, args: Arg*)(
+      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult]
   }
 }
 
@@ -17,7 +18,7 @@ trait PageBuilderImpl extends PageBuilder {
   self: LeafBuilder =>
 
   override val builder = new PageBuilderService {
-    val log = play.api.Logger(getClass.getSimpleName).logger
+    val log = play.api.Logger("PageBuilder").logger
 
     override def build(p: Pagelet, args: Arg*)(
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
