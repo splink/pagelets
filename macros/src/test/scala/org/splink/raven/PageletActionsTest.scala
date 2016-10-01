@@ -25,13 +25,12 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
 
   def actions = new PageletActionsImpl with Controller with PageBuilder with TreeTools with Resources {
 
-    val builderMock = mock[PageBuilderService]
-    override def builder: PageBuilderService = builderMock
+    override val builder: PageBuilderService = mock[PageBuilderService]
 
     val opsMock = mock[TreeOps]
     override implicit def treeOps(tree: Tree): TreeOps = opsMock
 
-    override def resources: ResourceProvider = mock[ResourceProvider]
+    override val resources: ResourceProvider = mock[ResourceProvider]
   }
 
   def leaf = mock[Leaf[_,_]]
@@ -48,7 +47,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
     "return a Pagelet if the tree contains the pagelet for the given id" in {
       val a = actions
       when(a.opsMock.find('one)).thenReturn(Some(leaf))
-      buildMock(a.builderMock)(Future.successful(PageletResult("body")))
+      buildMock(a.builder)(Future.successful(PageletResult("body")))
 
       val action = a.PageletAction(e => Html(s"${e.exception.msg}"))(tree, 'one) { (r, page) =>
         Html(s"${page.body}")
@@ -63,7 +62,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
     "return NotFound if the tree does not contain a pagelet for the given id" in {
       val a = actions
       when(a.opsMock.find('one)).thenReturn(None)
-      buildMock(a.builderMock)(Future.successful(PageletResult("body")))
+      buildMock(a.builder)(Future.successful(PageletResult("body")))
 
       val action = a.PageletAction(e => Html(s"${e.exception.msg}"))(tree, 'one) { (r, page) =>
         Html(s"${page.body}")
@@ -77,7 +76,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
     "return InternalServerError if the tree fails to build" in {
       val a = actions
       when(a.opsMock.find('one)).thenReturn(Some(leaf))
-      buildMock(a.builderMock)(Future.failed(new PageletException("something is wrong")))
+      buildMock(a.builder)(Future.failed(new PageletException("something is wrong")))
 
       val action = a.PageletAction(e => Html(s"${e.exception.msg}"))(tree, 'one) { (r, page) =>
         Html(s"${page.body}")
@@ -93,7 +92,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
   "PageAction" should {
     "return a Pagelet" in {
       val a = actions
-      buildMock(a.builderMock)(Future.successful(PageletResult("body")))
+      buildMock(a.builder)(Future.successful(PageletResult("body")))
 
       val action = a.PageAction(e => Html(s"${e.exception.msg}"))("title", tree) { (r, page) =>
         Html(s"${page.body}")
@@ -107,7 +106,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
 
     "return InternalServerError if the tree fails to build" in {
       val a = actions
-      buildMock(a.builderMock)(Future.failed(new PageletException("something is wrong")))
+      buildMock(a.builder)(Future.failed(new PageletException("something is wrong")))
 
       val action = a.PageAction(e => Html(s"${e.exception.msg}"))("title", tree) { (r, page) =>
         Html(s"${page.body}")

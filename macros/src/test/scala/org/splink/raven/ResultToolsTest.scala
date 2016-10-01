@@ -1,14 +1,24 @@
 package org.splink.raven
 
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.mock.MockitoSugar
 import org.scalatest.{FlatSpec, Matchers}
 import play.api.http.HttpEntity
 import play.api.mvc.{Action, Controller, ResponseHeader, Result}
 import play.api.test.FakeRequest
 
-class ResultToolsTest extends FlatSpec with Matchers with ScalaFutures {
+import org.mockito.Matchers._
+import org.mockito.Mockito._
 
-  val tools = new ResultToolsImpl with SerializerImpl {}
+class ResultToolsTest extends FlatSpec with Matchers with ScalaFutures with MockitoSugar {
+
+  val tools = new ResultToolsImpl with Serializer {
+    override val serializer: SerializerService = mock[SerializerService]
+
+    when(serializer.serialize[MetaTag](any[MetaTag])).thenReturn {
+      Right[SerializationError, String]("serialized")
+    }
+  }
 
   import tools._
 
@@ -53,7 +63,7 @@ class ResultToolsTest extends FlatSpec with Matchers with ScalaFutures {
   "ResultTools#withMetaTags" should "add one MetaTag to the result headers" in {
     val newResult = result.withMetaTags(MetaTag("some", "tag"))
 
-    newResult.header.headers.get(MetaTag.name).get should startWith("rO0ABXNyABhvcmcuc3BsaW5r")
+    newResult.header.headers.get(MetaTag.name).get should equal("serialized")
   }
 
   it should "add multiple MetaTag to the result headers" in {
@@ -62,7 +72,7 @@ class ResultToolsTest extends FlatSpec with Matchers with ScalaFutures {
     newResult.header.headers.get(MetaTag.name).get should contain(',')
   }
 
-  "ResultToolsImpl provides an implicit Writable which" should "permit an Action to return BrickResult as Result" in {
+  "ResultToolsImpl provides an implicit Writable which" should "permit an Action to return PageletResult as Result" in {
     class TestController extends Controller {
       def index = Action {
         Ok(PageletResult("Body"))

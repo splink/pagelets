@@ -3,6 +3,7 @@ package org.splink.raven
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.mock.MockitoSugar
 import org.scalatest.{FlatSpec, Matchers}
 import org.splink.raven.Exceptions.NoFallbackException
 import play.api.mvc.{Action, Results}
@@ -10,7 +11,7 @@ import play.api.test.FakeRequest
 
 import scala.concurrent.Future
 
-class LeafBuilderTest extends FlatSpec with Matchers with ScalaFutures {
+class LeafBuilderTest extends FlatSpec with Matchers with ScalaFutures with MockitoSugar {
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
   implicit val ec = system.dispatcher
@@ -28,7 +29,10 @@ class LeafBuilderTest extends FlatSpec with Matchers with ScalaFutures {
     throw TestException("async fail")
   })
 
-  val builder = new LeafBuilderImpl with LeafToolsImpl with SerializerImpl {}
+  //TODO use mock for LeafToolsImpl
+  val builder = new LeafBuilderImpl with LeafToolsImpl with Serializer {
+    override val serializer: SerializerService = mock[SerializerService]
+  }
 
   val requestId = RequestId("123")
 

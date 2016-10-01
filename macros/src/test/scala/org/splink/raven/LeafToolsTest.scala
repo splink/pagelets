@@ -25,8 +25,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
   override implicit def patienceConfig = PatienceConfig(Span(250, Millis), Span(50, Millis))
 
   val tools = new LeafToolsImpl with Serializer {
-    val serializerMock = mock[SerializerService]
-    override def serializer: SerializerService = serializerMock
+    override val serializer: SerializerService = mock[SerializerService]
   }
 
   "LeafTools#execute" should
@@ -141,11 +140,11 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
 
   it should "yield the correct de-duplicated metaTags" in {
     import scala.reflect.runtime.universe.TypeTag
-    when(tools.serializerMock.deserialize[MetaTag](M.eq("name1=content"))(any[TypeTag[MetaTag]])).thenReturn {
+    when(tools.serializer.deserialize[MetaTag](M.eq("name1=content"))(any[TypeTag[MetaTag]])).thenReturn {
       Right[tools.SerializationError, MetaTag](MetaTag("name1", "content"))
     }
 
-    when(tools.serializerMock.deserialize[MetaTag](M.eq("name2=content"))(any[TypeTag[MetaTag]])).thenReturn {
+    when(tools.serializer.deserialize[MetaTag](M.eq("name2=content"))(any[TypeTag[MetaTag]])).thenReturn {
       Right[tools.SerializationError, MetaTag](MetaTag("name2", "content"))
     }
 

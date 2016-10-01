@@ -14,9 +14,7 @@ class ResourceActionsTest extends PlaySpec with MockitoSugar {
   implicit val env = Environment.simple()
 
   def actions = new ResourceActionsImpl with Resources {
-    val resourcesMock = mock[ResourceProvider]
-
-    override def resources: ResourceProvider = resourcesMock
+    override val resources: ResourceProvider = mock[ResourceProvider]
   }
 
   val print = Fingerprint("hash")
@@ -25,8 +23,8 @@ class ResourceActionsTest extends PlaySpec with MockitoSugar {
   "ResourceAction" should {
     "return the resource with status Ok for a known fingerprint" in {
       val a = actions
-      when(a.resourcesMock.contains(print)).thenReturn(true)
-      when(a.resourcesMock.contentFor(print)).thenReturn {
+      when(a.resources.contains(print)).thenReturn(true)
+      when(a.resources.contentFor(print)).thenReturn {
         Some(ResourceContent("""console.log("a");""", JsMimeType))
       }
 
@@ -39,8 +37,8 @@ class ResourceActionsTest extends PlaySpec with MockitoSugar {
 
     "return BadRequest if the fingerprint is unknown" in {
       val a = actions
-      when(a.resourcesMock.contains(any[Fingerprint])).thenReturn(false)
-      when(a.resourcesMock.contentFor(any[Fingerprint])).thenReturn(None)
+      when(a.resources.contains(any[Fingerprint])).thenReturn(false)
+      when(a.resources.contentFor(any[Fingerprint])).thenReturn(None)
 
       val result = a.ResourceAction("something")(request)
       status(result) must equal(BAD_REQUEST)
@@ -48,8 +46,8 @@ class ResourceActionsTest extends PlaySpec with MockitoSugar {
 
     "return headers with etag" in {
       val a = actions
-      when(a.resourcesMock.contains(print)).thenReturn(true)
-      when(a.resourcesMock.contentFor(print)).thenReturn {
+      when(a.resources.contains(print)).thenReturn(true)
+      when(a.resources.contentFor(print)).thenReturn {
         Some(ResourceContent("""console.log("a");""", JsMimeType))
       }
 
@@ -60,7 +58,7 @@ class ResourceActionsTest extends PlaySpec with MockitoSugar {
 
     "return NotModified if the server holds a resource for the fingerprint in the etag (IF_NONE_MATCH) header" in {
       val a = actions
-      when(a.resourcesMock.contains(print)).thenReturn(true)
+      when(a.resources.contains(print)).thenReturn(true)
 
       val rwh = request.withHeaders(HeaderNames.IF_NONE_MATCH -> print.toString)
       val result = a.ResourceAction(print.toString)(rwh)
