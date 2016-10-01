@@ -1,44 +1,69 @@
 package org.splink.raven
 
-import org.scalatest.BeforeAndAfter
+import org.scalatest.mock.MockitoSugar
 import org.scalatestplus.play._
 import play.api.Environment
 import play.api.http.HeaderNames
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
-class ResourceActionsTest extends PlaySpec with BeforeAndAfter {
+import org.mockito.Matchers._
+import org.mockito.Mockito._
+
+class ResourceActionsTest extends PlaySpec with MockitoSugar {
   implicit val env = Environment.simple()
 
-  val actions = new ResourceActionsImpl with ResourcesImpl {}
-  val print = actions.resources.update(Set(Javascript("a.js")))
+  def actions = new ResourceActionsImpl with Resources {
+    val resourcesMock = mock[ResourceProvider]
+
+    override def resources: ResourceProvider = resourcesMock
+  }
+
+  val print = Fingerprint("hash")
   val request = FakeRequest()
 
   "ResourceAction" should {
     "return the resource with status Ok for a known fingerprint" in {
-      val result = actions.ResourceAction(print.get.toString)(request)
+      val a = actions
+      when(a.resourcesMock.contains(print)).thenReturn(true)
+      when(a.resourcesMock.contentFor(print)).thenReturn {
+        Some(ResourceContent("""console.log("a");""", JsMimeType))
+      }
+
+      val result = a.ResourceAction(print.toString)(request)
 
       status(result) must equal(OK)
       contentType(result) must equal(Some(JsMimeType.name))
-      contentAsString(result) must equal(
-        """console.log("a");
-          |""".stripMargin)
+      contentAsString(result) must equal("""console.log("a");""")
     }
 
     "return BadRequest if the fingerprint is unknown" in {
-      val result = actions.ResourceAction("something")(request)
+      val a = actions
+      when(a.resourcesMock.contains(any[Fingerprint])).thenReturn(false)
+      when(a.resourcesMock.contentFor(any[Fingerprint])).thenReturn(None)
+
+      val result = a.ResourceAction("something")(request)
       status(result) must equal(BAD_REQUEST)
     }
 
     "return headers with etag" in {
-      val result = actions.ResourceAction(print.get.toString)(request)
+      val a = actions
+      when(a.resourcesMock.contains(print)).thenReturn(true)
+      when(a.resourcesMock.contentFor(print)).thenReturn {
+        Some(ResourceContent("""console.log("a");""", JsMimeType))
+      }
 
-      header(HeaderNames.ETAG, result) must equal(Some(print.get.toString))
+      val result = a.ResourceAction(print.toString)(request)
+
+      header(HeaderNames.ETAG, result) must equal(Some(print.toString))
     }
 
     "return NotModified if the server holds a resource for the fingerprint in the etag (IF_NONE_MATCH) header" in {
-      val rwh = request.withHeaders(HeaderNames.IF_NONE_MATCH -> print.get.toString)
-      val result = actions.ResourceAction(print.get.toString)(rwh)
+      val a = actions
+      when(a.resourcesMock.contains(print)).thenReturn(true)
+
+      val rwh = request.withHeaders(HeaderNames.IF_NONE_MATCH -> print.toString)
+      val result = a.ResourceAction(print.toString)(rwh)
       status(result) must equal(NOT_MODIFIED)
     }
   }
