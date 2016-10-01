@@ -2,10 +2,9 @@ package org.splink.raven
 
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, Seconds}
-import org.splink.raven.Resources.Fingerprint
 import play.api.http.HeaderNames._
 import play.api.mvc.Results._
-import play.api.mvc._
+import play.api.mvc.{Action, AnyContent, Request, Result}
 
 import scala.concurrent.duration._
 
@@ -13,9 +12,9 @@ trait ResourceActions {
   def ResourceAction(fingerprint: String, validFor: Duration = 365.days): Action[AnyContent]
 }
 
-trait ResourceActionsImpl extends ResourceActions {
+trait ResourceActionsImpl extends ResourceActions { self: Resources =>
   override def ResourceAction(fingerprint: String, validFor: Duration = 365.days) = EtagAction { request =>
-    Resources().contentFor(Fingerprint(fingerprint)).map { content =>
+    resources.contentFor(Fingerprint(fingerprint)).map { content =>
       Ok(content.body).as(content.mimeType.name).withHeaders(CacheHeaders(fingerprint, validFor): _*)
     }.getOrElse {
       BadRequest
@@ -24,7 +23,7 @@ trait ResourceActionsImpl extends ResourceActions {
 
   def EtagAction(f: Request[AnyContent] => Result) = Action { request =>
     request.headers.get(IF_NONE_MATCH).map { etag =>
-      if (Resources().contains(Fingerprint(etag))) NotModified else f(request)
+      if (resources.contains(Fingerprint(etag))) NotModified else f(request)
     }.getOrElse {
       f(request)
     }

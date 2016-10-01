@@ -9,4 +9,5 @@ class Assembly extends PageletController
   with ResultToolsImpl
   with SerializerImpl
   with ResourceActionsImpl
+  with ResourcesImpl
   with VisualizerImpl

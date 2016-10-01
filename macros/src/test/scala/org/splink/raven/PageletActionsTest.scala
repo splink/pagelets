@@ -23,13 +23,15 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
   implicit val env = Environment.simple()
   implicit val request = FakeRequest()
 
-  def actions = new PageletActionsImpl with Controller with PageBuilder with TreeTools {
+  def actions = new PageletActionsImpl with Controller with PageBuilder with TreeTools with Resources {
 
     val builderMock = mock[PageBuilderService]
     override def builder: PageBuilderService = builderMock
 
     val opsMock = mock[TreeOps]
     override implicit def treeOps(tree: Tree): TreeOps = opsMock
+
+    override def resources: ResourceProvider = mock[ResourceProvider]
   }
 
   def leaf = mock[Leaf[_,_]]

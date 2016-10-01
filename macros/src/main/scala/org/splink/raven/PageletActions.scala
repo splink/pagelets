@@ -2,7 +2,6 @@ package org.splink.raven
 
 import akka.stream.Materializer
 import org.splink.raven.Exceptions.PageletException
-import org.splink.raven.Resources.Fingerprint
 import play.api.{Logger, Environment}
 import play.api.http.Writeable
 import play.api.mvc._
@@ -34,7 +33,7 @@ trait PageletActions {
 }
 
 trait PageletActionsImpl extends PageletActions {
-  self: Controller with PageBuilder with TreeTools =>
+  self: Controller with PageBuilder with TreeTools with Resources =>
   private val log = Logger("PageletActions").logger
 
   override def PageAction[T: Writeable](errorTemplate: ErrorPage => T)(
@@ -64,9 +63,9 @@ trait PageletActionsImpl extends PageletActions {
   }
 
   def mkPage(title: String, result: PageletResult)(implicit r: RequestHeader, env: Environment) = {
-    val jsFinger = Resources().update(result.js)
-    val jsTopFinger = Resources().update(result.jsTop)
-    val cssFinger = Resources().update(result.css)
+    val jsFinger = resources.update(result.js)
+    val jsTopFinger = resources.update(result.jsTop)
+    val cssFinger = resources.update(result.css)
 
     Page(request2lang.language,
       Head(title, result.metaTags, jsTopFinger, cssFinger),

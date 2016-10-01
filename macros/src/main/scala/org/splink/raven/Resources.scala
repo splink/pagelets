@@ -5,11 +5,8 @@ import play.api.{Environment, Logger, Mode}
 
 import scala.io.Source
 
-//TODO running scalatest in parallel shows the flaw in this design. maybe rework to a cake mixin is better
-object Resources {
-  private val impl = new ResourceProviderImpl(Map.empty, Map.empty)
-
-  def apply(): ResourceProvider = impl
+trait Resources {
+  def resources: ResourceProvider
 
   trait ResourceProvider {
     def contains(fingerprint: Fingerprint): Boolean
@@ -17,13 +14,17 @@ object Resources {
     def contentFor(fingerprint: Fingerprint): Option[ResourceContent]
 
     def update[T <: Resource](resources: Set[T])(implicit e: Environment): Option[Fingerprint]
-
-    def clear(): Unit
   }
 
-  class ResourceProviderImpl(
-                              var cache: Map[Fingerprint, ResourceContent],
-                              var itemCache: Map[Fingerprint, ResourceContent]) extends ResourceProvider {
+}
+
+trait ResourcesImpl extends Resources {
+
+  override val resources = new ResourceProviderImpl
+
+  class ResourceProviderImpl extends ResourceProvider {
+    var cache = Map[Fingerprint, ResourceContent]()
+    var itemCache = Map[Fingerprint, ResourceContent]()
     val log = Logger("Resources").logger
 
     val BasePath = "public/"
@@ -32,7 +33,7 @@ object Resources {
 
     override def contains(fingerprint: Fingerprint) = cache.contains(fingerprint)
 
-    override def clear() = {
+    def clear() = {
       cache = cache.empty
       itemCache = cache.empty
     }
@@ -74,38 +75,40 @@ object Resources {
     }
   }
 
-  case class Fingerprint(s: String) {
-    override def toString = s
-  }
-
-  case object ResourceContent {
-    val empty = ResourceContent("", PlainMimeType)
-  }
-
-  case class ResourceContent(body: String, mimeType: MimeType) {
-    override def toString = body
-
-    def +(that: ResourceContent) = copy(body = body + that.body, mimeType = that.mimeType)
-  }
-
-  sealed trait MimeType {
-    def name: String
-  }
-
-  case object PlainMimeType extends MimeType {
-    override def name = "plain/text"
-  }
-
-  case object CssMimeType extends MimeType {
-    override def name = "text/css"
-  }
-
-  case object JsMimeType extends MimeType {
-    override def name = "text/javascript"
-  }
-
   private def mimeTypeFor(resource: Resource) = resource match {
     case a: Javascript => JsMimeType
     case a: Css => CssMimeType
   }
+
+
+}
+
+case class Fingerprint(s: String) {
+  override def toString = s
+}
+
+case object ResourceContent {
+  val empty = ResourceContent("", PlainMimeType)
+}
+
+case class ResourceContent(body: String, mimeType: MimeType) {
+  override def toString = body
+
+  def +(that: ResourceContent) = copy(body = body + that.body, mimeType = that.mimeType)
+}
+
+sealed trait MimeType {
+  def name: String
+}
+
+case object PlainMimeType extends MimeType {
+  override def name = "plain/text"
+}
+
+case object CssMimeType extends MimeType {
+  override def name = "text/css"
+}
+
+case object JsMimeType extends MimeType {
+  override def name = "text/javascript"
 }
