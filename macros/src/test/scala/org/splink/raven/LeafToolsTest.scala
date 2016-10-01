@@ -3,13 +3,19 @@ package org.splink.raven
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.mock.MockitoSugar
 import org.scalatest.time.{Millis, Span}
 import org.scalatest.{EitherValues, FlatSpec, Matchers}
 import org.splink.raven.Exceptions.TypeException
 import play.api.mvc.{Action, Cookie, Results}
 import play.api.test.FakeRequest
 
-class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with EitherValues {
+import org.mockito.Matchers._
+import org.mockito.{Matchers => M}
+import org.mockito.Mockito._
+
+
+class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with EitherValues with MockitoSugar {
 
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
@@ -18,7 +24,10 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
 
   override implicit def patienceConfig = PatienceConfig(Span(250, Millis), Span(50, Millis))
 
-  val tools = new LeafToolsImpl with SerializerImpl
+  val tools = new LeafToolsImpl with Serializer {
+    val serializerMock = mock[SerializerService]
+    override def serializer: SerializerService = serializerMock
+  }
 
   "LeafTools#execute" should
     "successfully produce a Future if FunctionInfo's types fit the args and it's fnc returns an Action[AnyContent]" in {
@@ -131,15 +140,21 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
   }
 
   it should "yield the correct de-duplicated metaTags" in {
+    import scala.reflect.runtime.universe.TypeTag
+    when(tools.serializerMock.deserialize[MetaTag](M.eq("name1=content"))(any[TypeTag[MetaTag]])).thenReturn {
+      Right[tools.SerializationError, MetaTag](MetaTag("name1", "content"))
+    }
+
+    when(tools.serializerMock.deserialize[MetaTag](M.eq("name2=content"))(any[TypeTag[MetaTag]])).thenReturn {
+      Right[tools.SerializationError, MetaTag](MetaTag("name2", "content"))
+    }
+
     def fnc(s: String) = Action {
-      val serializer = new SerializerImpl {}.serializer
-      val s1 = serializer.serialize(MetaTag("key1", "value1")).right.get
-      val s2 = serializer.serialize(MetaTag("key2", "value2")).right.get
-      Results.Ok(s).withHeaders(MetaTag.name -> s"$s1,$s2,$s2")
+      Results.Ok(s).withHeaders(MetaTag.name -> s"name1=content,name1=content,name2=content")
     }
 
     val result = leafOps.transform(fnc("Hi")).futureValue
-    result.metaTags should equal(Set(MetaTag("key1", "value1"), MetaTag("key2", "value2")))
+    result.metaTags should equal(Set(MetaTag("name1", "content"), MetaTag("name2", "content")))
   }
 
   it should "yield the correct de-duplicated cookies" in {
