@@ -2,6 +2,7 @@ package org.splink.raven
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
+import org.mockito.Mockito._
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.time.{Millis, Span}
@@ -9,11 +10,6 @@ import org.scalatest.{EitherValues, FlatSpec, Matchers}
 import org.splink.raven.Exceptions.TypeException
 import play.api.mvc.{Action, Cookie, Results}
 import play.api.test.FakeRequest
-
-import org.mockito.Matchers._
-import org.mockito.{Matchers => M}
-import org.mockito.Mockito._
-
 
 class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with EitherValues with MockitoSugar {
 
@@ -139,12 +135,11 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
   }
 
   it should "yield the correct de-duplicated metaTags" in {
-    import scala.reflect.runtime.universe.TypeTag
-    when(tools.serializer.deserialize[MetaTag](M.eq("name1=content"))(any[TypeTag[MetaTag]])).thenReturn {
+    when(tools.serializer.deserialize[MetaTag]("name1=content")).thenReturn {
       Right[tools.SerializationError, MetaTag](MetaTag("name1", "content"))
     }
 
-    when(tools.serializer.deserialize[MetaTag](M.eq("name2=content"))(any[TypeTag[MetaTag]])).thenReturn {
+    when(tools.serializer.deserialize[MetaTag]("name2=content")).thenReturn {
       Right[tools.SerializationError, MetaTag](MetaTag("name2", "content"))
     }
 
@@ -272,6 +267,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
   }
 
   case class Test2(name: String)
+
   it should "return the classname for any custom class" in {
     val name = leafOps.scalaClassNameFor(Test2("yo"))
     name should equal("org.splink.raven.LeafToolsTest.Test2")
