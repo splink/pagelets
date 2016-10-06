@@ -2,23 +2,20 @@ package org.splink.pagelets
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
+import helpers.FutureHelper
 import org.mockito.Mockito._
-import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mock.MockitoSugar
-import org.scalatest.time.{Millis, Span}
 import org.scalatest.{EitherValues, FlatSpec, Matchers}
 import org.splink.pagelets.Exceptions.TypeException
 import play.api.mvc.{Action, Cookie, Results}
 import play.api.test.FakeRequest
 
-class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with EitherValues with MockitoSugar {
+class LeafToolsTest extends FlatSpec with Matchers with FutureHelper with EitherValues with MockitoSugar {
 
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
   implicit val ec = system.dispatcher
   implicit val request = FakeRequest()
-
-  override implicit def patienceConfig = PatienceConfig(Span(250, Millis), Span(50, Millis))
 
   val tools = new LeafToolsImpl with Serializer {
     override val serializer: SerializerService = mock[SerializerService]
@@ -47,7 +44,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
 
     val leaf = Leaf('someId, info)
 
-    val result = tools.leafOps(leaf).execute(info, Seq.empty).eitherValue.get.left.get
+    val result = tools.leafOps(leaf).execute(info, Seq.empty).futureTry.failed.get
 
     result shouldBe a[TypeException]
     result.getMessage should equal("'someId: 's:java.lang.String' not found in Arguments()")
@@ -75,7 +72,7 @@ class LeafToolsTest extends FlatSpec with Matchers with ScalaFutures with Either
     val args = Seq(Arg("s0", "s0"), Arg("s1", "s1"), Arg("s2", "s2"), Arg("s3", "s3"), Arg("s4", "s4"),
       Arg("s5", "s5"), Arg("s6", "s6"), Arg("s7", "s7"), Arg("s8", "s8"), Arg("s9", "s9"), Arg("s10", "s10"))
 
-    val result = tools.leafOps(leaf).execute(info, args).eitherValue.get.left.get
+    val result = tools.leafOps(leaf).execute(info, args).futureTry.failed.get
 
     result shouldBe a[IllegalArgumentException]
     result.getMessage should equal("'someId: too many arguments: 11")

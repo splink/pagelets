@@ -1,6 +1,6 @@
 package org.splink.pagelets
 
-import org.scalatest.concurrent.ScalaFutures
+import helpers.FutureHelper
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{FlatSpec, Matchers}
 import play.api.http.HttpEntity
@@ -10,7 +10,7 @@ import play.api.test.FakeRequest
 import org.mockito.Matchers._
 import org.mockito.Mockito._
 
-class ResultToolsTest extends FlatSpec with Matchers with ScalaFutures with MockitoSugar {
+class ResultToolsTest extends FlatSpec with Matchers with FutureHelper with MockitoSugar {
 
   val tools = new ResultToolsImpl with Serializer {
     override val serializer: SerializerService = mock[SerializerService]

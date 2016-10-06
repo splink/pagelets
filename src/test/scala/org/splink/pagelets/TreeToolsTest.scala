@@ -2,12 +2,12 @@ package org.splink.pagelets
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import org.scalatest.concurrent.ScalaFutures
+import helpers.FutureHelper
 import org.scalatest.{FlatSpec, Matchers}
 import play.api.mvc.{Results, Action, AnyContent}
 import play.api.test.FakeRequest
 
-class TreeToolsTest extends FlatSpec with Matchers with ScalaFutures {
+class TreeToolsTest extends FlatSpec with Matchers with FutureHelper {
 
   import FunctionMacros._
 

@@ -2,8 +2,8 @@ package org.splink.pagelets
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
+import helpers.FutureHelper
 import org.mockito.Mockito._
-import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{FlatSpec, Matchers}
 import org.splink.pagelets.Exceptions.NoFallbackException
@@ -13,7 +13,7 @@ import play.api.test.FakeRequest
 import scala.concurrent.Future
 import scala.language.implicitConversions
 
-class LeafBuilderTest extends FlatSpec with Matchers with ScalaFutures with MockitoSugar {
+class LeafBuilderTest extends FlatSpec with Matchers with FutureHelper with MockitoSugar {
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
   implicit val ec = system.dispatcher

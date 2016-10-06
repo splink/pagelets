@@ -2,7 +2,7 @@ package org.splink.pagelets
 
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, Materializer}
-import org.scalatest.concurrent.ScalaFutures
+import helpers.FutureHelper
 import org.scalatest.{FlatSpec, Matchers}
 import play.api.mvc.{Action, AnyContent, Request, Results}
 import play.api.test.FakeRequest
@@ -10,7 +10,7 @@ import play.api.test.FakeRequest
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-class PageBuilderTest extends FlatSpec with Matchers with ScalaFutures {
+class PageBuilderTest extends FlatSpec with Matchers with FutureHelper {
 
   import FunctionMacros._
 
@@ -37,7 +37,7 @@ class PageBuilderTest extends FlatSpec with Matchers with ScalaFutures {
     override val leafBuilderService = new LeafBuilderService {
       override def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId, isRoot: Boolean)(
         implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) =
-        delay((Math.random() * 5).toInt.millis)(Future(PageletResult(leaf.id.name)))
+        delay((Math.random() * 5).toInt.millis)(Future.successful(PageletResult(leaf.id.name)))
     }
   }.builder
 
