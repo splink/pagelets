@@ -26,7 +26,7 @@ trait PageBuilderImpl extends PageBuilder {
 
       def rec(p: Pagelet): Future[PageletResult] =
         p match {
-          case t@Tree(id, children) =>
+          case t@Tree(id, children, _) =>
             val start = System.currentTimeMillis()
             log.info(s"$requestId Invoke pagelet ${p.id}")
 

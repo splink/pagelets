@@ -15,12 +15,6 @@ case class Leaf[A, B](id: Symbol,
 }
 
 object Tree {
-
-  def apply(id: Symbol, children: Seq[Pagelet], combiner: Seq[PageletResult] => PageletResult = Tree.combine): Tree =
-    new Tree(id, children) {
-      override def combine: Seq[PageletResult] => PageletResult = combiner
-    }
-
   def combine(results: Seq[PageletResult]): PageletResult =
     results.foldLeft(PageletResult.empty) { (acc, next) =>
       PageletResult(
@@ -33,8 +27,15 @@ object Tree {
     }
 }
 
-case class Tree private(id: Symbol, children: Seq[Pagelet]) extends Pagelet {
-  def combine: Seq[PageletResult] => PageletResult = Tree.combine
+case class Tree private(id: Symbol, children: Seq[Pagelet], combine: Seq[PageletResult] => PageletResult = Tree.combine) extends Pagelet {
+
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: Tree => this.hashCode == that.hashCode
+      case _ => false
+    }
+
+  override def hashCode: Int = 31 * (31 + id.hashCode) + children.hashCode
 
   override def toString = s"Tree(${id.name}\n ${children.map(_.toString)})"
 }

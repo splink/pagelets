@@ -12,6 +12,7 @@ import play.api.mvc._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.twirl.api.Html
+import scala.language.reflectiveCalls
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions

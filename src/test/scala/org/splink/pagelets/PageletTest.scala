@@ -21,15 +21,19 @@ class PageletTest extends FlatSpec with Matchers {
   }
 
   "Tree#equals" should "identify equal Tree nodes" in {
-    val a = Tree('one, Seq.empty)
-    val b = Tree('one, Seq.empty)
+    def combine(results: Seq[PageletResult]) = Tree.combine(results)
+
+    val a = Tree('one, Seq.empty, combine)
+    val b = Tree('one, Seq.empty, combine)
 
     a should equal(b)
   }
 
   it should "identify unequal Tree nodes" in {
-    val a = Tree('one, Seq.empty)
-    val b = Tree('two, Seq.empty)
+    def combine(results: Seq[PageletResult]) = Tree.combine(results)
+
+    val a = Tree('one, Seq.empty, combine)
+    val b = Tree('two, Seq.empty, combine)
 
     a should not equal b
   }
@@ -66,5 +70,18 @@ class PageletTest extends FlatSpec with Matchers {
     val b = Tree('one, Seq(l1, l3))
 
     a should not equal b
+  }
+
+  "Tree#copy" should "copy the whole tree" in {
+    def combine(results: Seq[PageletResult]) = Tree.combine(results)
+    val combineFnc = combine _
+
+    val a = Tree('one, Seq.empty, combineFnc)
+    val b =  a.copy(id = 'two)
+
+    a.id should equal('one)
+    b.id should equal('two)
+    b.children should equal(Seq.empty)
+    b.combine should equal(combineFnc)
   }
 }
