@@ -8,7 +8,7 @@ import play.twirl.api.Html
 import scala.util.Try
 
 object TwirlConversions {
-  private val log = Logger("TwirlConversions").logger
+  private val log = Logger("TwirlConversions")
 
   def combine(results: Seq[PageletResult])(template: Seq[Html] => Html) = {
     val htmls = results.map(r => Html(r.body))

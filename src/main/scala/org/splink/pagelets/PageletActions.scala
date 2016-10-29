@@ -20,7 +20,7 @@ case class Page(language: String,
 
 case class ErrorPage(language: String,
                      title: String,
-                     exception: PageletException)
+                     exception: Throwable)
 
 trait PageletActions {
   def PageAction[T: Writeable](errorTemplate: ErrorPage => T)(
@@ -42,7 +42,7 @@ trait PageletActionsImpl extends PageletActions {
     builder.build(tree(request), args: _*).map { result =>
       Ok(template(request, mkPage(title, result))).withCookies(result.cookies: _*)
     }.recover {
-      case e: PageletException =>
+      case e: Throwable =>
         log.error(s"$e")
         InternalServerError(errorTemplate(ErrorPage(request2lang.language, title, e)))
     }

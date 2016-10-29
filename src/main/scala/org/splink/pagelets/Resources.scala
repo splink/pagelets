@@ -25,7 +25,7 @@ trait ResourcesImpl extends Resources {
   class ResourceProviderImpl extends ResourceProvider {
     var cache = Map[Fingerprint, ResourceContent]()
     var itemCache = Map[Fingerprint, ResourceContent]()
-    val log = Logger("Resources").logger
+    val log = Logger("Resources")
 
     val BasePath = "public/"
 

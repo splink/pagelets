@@ -15,7 +15,7 @@ trait TreeTools {
 }
 
 trait TreeToolsImpl extends TreeTools {
-  val log = play.api.Logger("TreeTools").logger
+  val log = play.api.Logger("TreeTools")
 
   override implicit def treeOps(tree: Tree): TreeOps = new TreeOpsImpl(tree)
 

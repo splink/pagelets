@@ -18,7 +18,7 @@ trait PageBuilderImpl extends PageBuilder {
   self: LeafBuilder =>
 
   override val builder = new PageBuilderService {
-    val log = play.api.Logger("PageBuilder").logger
+    val log = play.api.Logger("PageBuilder")
 
     override def build(p: Pagelet, args: Arg*)(
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
@@ -36,8 +36,7 @@ trait PageBuilderImpl extends PageBuilder {
             }
 
           case l: Leaf[_, _] =>
-            val isRoot = p.id == l.id
-            leafBuilderService.build(l, args, requestId, isRoot)
+            leafBuilderService.build(l, args, requestId, isRoot = p.id == l.id)
         }
 
       rec(p)

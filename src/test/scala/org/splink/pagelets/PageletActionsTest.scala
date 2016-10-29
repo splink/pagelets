@@ -50,7 +50,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       when(a.opsMock.find('one)).thenReturn(Some(leaf))
       buildMock(a.builder)(Future.successful(PageletResult("body")))
 
-      val action = a.PageletAction(e => Html(s"${e.exception.msg}"))(tree, 'one) { (r, page) =>
+      val action = a.PageletAction(e => Html(s"${e.exception.getMessage}"))(tree, 'one) { (r, page) =>
         Html(s"${page.body}")
       }
 
@@ -65,7 +65,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       when(a.opsMock.find('one)).thenReturn(None)
       buildMock(a.builder)(Future.successful(PageletResult("body")))
 
-      val action = a.PageletAction(e => Html(s"${e.exception.msg}"))(tree, 'one) { (r, page) =>
+      val action = a.PageletAction(e => Html(s"${e.exception.getMessage}"))(tree, 'one) { (r, page) =>
         Html(s"${page.body}")
       }
 
@@ -79,7 +79,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       when(a.opsMock.find('one)).thenReturn(Some(leaf))
       buildMock(a.builder)(Future.failed(new PageletException("something is wrong")))
 
-      val action = a.PageletAction(e => Html(s"${e.exception.msg}"))(tree, 'one) { (r, page) =>
+      val action = a.PageletAction(e => Html(s"${e.exception.getMessage}"))(tree, 'one) { (r, page) =>
         Html(s"${page.body}")
       }
 
@@ -95,7 +95,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       val a = actions
       buildMock(a.builder)(Future.successful(PageletResult("body")))
 
-      val action = a.PageAction(e => Html(s"${e.exception.msg}"))("title", tree) { (r, page) =>
+      val action = a.PageAction(e => Html(s"${e.exception.getMessage}"))("title", tree) { (r, page) =>
         Html(s"${page.body}")
       }
 
@@ -109,7 +109,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       val a = actions
       buildMock(a.builder)(Future.failed(new PageletException("something is wrong")))
 
-      val action = a.PageAction(e => Html(s"${e.exception.msg}"))("title", tree) { (r, page) =>
+      val action = a.PageAction(e => Html(s"${e.exception.getMessage}"))("title", tree) { (r, page) =>
         Html(s"${page.body}")
       }
 
