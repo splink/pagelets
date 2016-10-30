@@ -1,6 +1,6 @@
 package org.splink.pagelets
 
-class Assembly extends PageletController
+class PageletsAssembly extends Pagelets
   with PageletActionsImpl
   with PageBuilderImpl
   with LeafBuilderImpl

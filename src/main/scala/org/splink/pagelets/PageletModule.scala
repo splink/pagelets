@@ -5,6 +5,6 @@ import play.api.inject.Module
 
 class PageletModule extends Module {
   def bindings(environment: Environment, configuration: Configuration) = Seq(
-    bind[PageletController].to[Assembly]
+    bind[Pagelets].to[PageletsAssembly]
   )
 }
