@@ -10,8 +10,8 @@ lazy val root = (project in file(".")).
       "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % Test,
       "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % Test,
       "org.mockito" % "mockito-core" % "1.10.19" % Test,
-      "com.typesafe.play" %% "play" % "2.5.4",
-      "com.typesafe.akka" %% "akka-stream" % "2.4.4"),
+      "com.typesafe.play" %% "play" % "2.5.9",
+      "com.typesafe.akka" %% "akka-stream" % "2.4.10"),
     scalacOptions ++= Seq(
       "-unchecked",
       "-deprecation",
