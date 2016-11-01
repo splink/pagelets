@@ -20,11 +20,30 @@ The idea behind the Pagelets Module is to split a web page into small, composabl
 Pagelets are non invasive and not opinionated: You can stick to your code style and apply the patterns you prefer. Use your favorite dependency injection mechanism and template engine. You don't need to apply the goodness of pagelets everywhere, only employ pagelets where you need them. Pagelets also do not introduce additional dependencies to your project. 
 
 ### Usage
-The pagelets Module requires Play Framework 2.5.x
+
+#### Activator
+If you want to check out a small multi-language website built with with Play Pagelets, or just need a seed to start a new project, use the [activator](https://www.lightbend.com/community/core-tools/activator-and-sbt#overview) template. Enter:
+
+```bash
+activator new
+```
+then select the play-pagelets-seed template by entering:
+```bash
+play-pagelets-seed
+```
+then activator creates a new project based on the [play pagelets activator template](https://github.com/splink/pagelets-seed). To see the project in action, navigate to the play-pagelets-seed folder and enter:
+```bash
+activator run
+```
+then point your browser to [http://localhost:9000](http://localhost:9000)
+
+
+#### From scratch:
+The Pagelets Module requires Play Framework 2.5.x
 Add the following lines to your build.sbt file:
 
 ```scala
-libraryDependencies += "org.splink" %% "pagelets" % "0.0.1"
+libraryDependencies += "org.splink" %% "pagelets" % "0.0.2
 routesImport += "org.splink.pagelets.Binders._"
 ```
 
