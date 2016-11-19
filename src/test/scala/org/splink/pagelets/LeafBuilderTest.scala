@@ -31,9 +31,7 @@ class LeafBuilderTest extends FlatSpec with Matchers with FutureHelper with Mock
     throw TestException("async fail")
   })
 
-  val builder = new LeafBuilderImpl with LeafTools with Serializer {
-    override val serializer: SerializerService = mock[SerializerService]
-
+  val builder = new LeafBuilderImpl with LeafTools {
     val leafOpsMock = mock[LeafOps]
 
     override implicit def leafOps(leaf: Leaf[_, _]): LeafOps = leafOpsMock
@@ -41,7 +39,6 @@ class LeafBuilderTest extends FlatSpec with Matchers with FutureHelper with Mock
     when(leafOpsMock.execute(FunctionInfo(successAction), Seq.empty)).thenReturn(Future.successful(PageletResult("action")))
     when(leafOpsMock.execute(FunctionInfo(failedAction), Seq.empty)).thenReturn(Future.failed(TestException("sync fail")))
     when(leafOpsMock.execute(FunctionInfo(failedAsyncAction), Seq.empty)).thenReturn(Future.failed(TestException("async fail")))
-
   }
 
   val requestId = RequestId("123")

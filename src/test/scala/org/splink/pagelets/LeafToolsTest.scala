@@ -3,7 +3,6 @@ package org.splink.pagelets
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import helpers.FutureHelper
-import org.mockito.Mockito._
 import org.scalatest.mock.MockitoSugar
 import org.scalatest.{EitherValues, FlatSpec, Matchers}
 import org.splink.pagelets.Exceptions.TypeException
@@ -17,9 +16,7 @@ class LeafToolsTest extends FlatSpec with Matchers with FutureHelper with Either
   implicit val ec = system.dispatcher
   implicit val request = FakeRequest()
 
-  val tools = new LeafToolsImpl with Serializer {
-    override val serializer: SerializerService = mock[SerializerService]
-  }
+  val tools = new LeafToolsImpl {}
 
   "LeafTools#execute" should
     "successfully produce a Future if FunctionInfo's types fit the args and it's fnc returns an Action[AnyContent]" in {
@@ -100,52 +97,6 @@ class LeafToolsTest extends FlatSpec with Matchers with FutureHelper with Either
 
     val result = leafOps.transform(fnc("Hi")).futureValue
     result.body should equal("Hi")
-  }
-
-  it should "yield the correct de-duplicated js" in {
-    def fnc(s: String) = Action {
-      Results.Ok(s).withHeaders(Javascript.name -> "a.js,b.js,b.js")
-    }
-
-    val result = leafOps.transform(fnc("Hi")).futureValue
-    result.js should equal(Set(Javascript("a.js"), Javascript("b.js")))
-  }
-
-  it should "yield the correct de-duplicated jsTop" in {
-    def fnc(s: String) = Action {
-      Results.Ok(s).withHeaders(Javascript.nameTop -> "a.js,b.js,b.js")
-    }
-
-    val result = leafOps.transform(fnc("Hi")).futureValue
-
-    result.js should equal(Set.empty)
-    result.jsTop should equal(Set(Javascript("a.js"), Javascript("b.js")))
-  }
-
-  it should "yield the correct de-duplicated css" in {
-    def fnc(s: String) = Action {
-      Results.Ok(s).withHeaders(Css.name -> "a.css,b.css,b.css")
-    }
-
-    val result = leafOps.transform(fnc("Hi")).futureValue
-    result.css should equal(Set(Css("a.css"), Css("b.css")))
-  }
-
-  it should "yield the correct de-duplicated metaTags" in {
-    when(tools.serializer.deserialize[MetaTag]("name1=content")).thenReturn {
-      Right[tools.SerializationError, MetaTag](MetaTag("name1", "content"))
-    }
-
-    when(tools.serializer.deserialize[MetaTag]("name2=content")).thenReturn {
-      Right[tools.SerializationError, MetaTag](MetaTag("name2", "content"))
-    }
-
-    def fnc(s: String) = Action {
-      Results.Ok(s).withHeaders(MetaTag.name -> s"name1=content,name1=content,name2=content")
-    }
-
-    val result = leafOps.transform(fnc("Hi")).futureValue
-    result.metaTags should equal(Set(MetaTag("name1", "content"), MetaTag("name2", "content")))
   }
 
   it should "yield the correct de-duplicated cookies" in {

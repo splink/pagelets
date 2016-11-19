@@ -18,8 +18,9 @@ object TwirlConversions {
 
   private def combineAssets(results: Seq[PageletResult]): (String) => PageletResult = {
     val (js, jsTop, css, cookies, metaTags) = results.foldLeft(
-      Set.empty[Javascript], Set.empty[Javascript], Set.empty[Css], Seq.empty[Cookie], Set.empty[MetaTag]) { (acc, next) =>
-      (acc._1 ++ next.js, acc._2 ++ next.jsTop, acc._3 ++ next.css, acc._4 ++ next.cookies, acc._5 ++ next.metaTags)
+      Seq.empty[Javascript], Seq.empty[Javascript], Seq.empty[Css], Seq.empty[Cookie], Seq.empty[MetaTag]) { (acc, next) =>
+      (acc._1 ++ next.js, acc._2 ++ next.jsTop, acc._3 ++ next.css,
+        (acc._4 ++ next.cookies).distinct, (acc._5 ++ next.metaTags).distinct)
     }
     PageletResult(_, js, jsTop, css, cookies, metaTags)
   }

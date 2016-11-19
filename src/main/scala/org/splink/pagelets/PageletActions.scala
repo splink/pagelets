@@ -1,7 +1,6 @@
 package org.splink.pagelets
 
 import akka.stream.Materializer
-import org.splink.pagelets.Exceptions.PageletException
 import play.api.{Logger, Environment}
 import play.api.http.Writeable
 import play.api.mvc._
@@ -9,7 +8,7 @@ import play.api.mvc._
 import scala.concurrent.{Future, ExecutionContext}
 
 case class Head(title: String,
-                metaTags: Set[MetaTag] = Set.empty,
+                metaTags: Seq[MetaTag] = Seq.empty,
                 js: Option[Fingerprint] = None,
                 css: Option[Fingerprint] = None)
 

@@ -19,7 +19,6 @@ trait LeafTools {
 }
 
 trait LeafToolsImpl extends LeafTools {
-  self: Serializer =>
 
   override implicit def leafOps(leaf: Leaf[_, _]): LeafOps = new LeafOpsImpl(leaf)
 
@@ -65,28 +64,13 @@ trait LeafToolsImpl extends LeafTools {
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
       action(r).map { result =>
 
-        def header(key: String) = result.header.headers.get(key)
+        val cookies = result.header.headers.get(HeaderNames.SET_COOKIE).
+          map(Cookies.decodeSetCookieHeader).getOrElse(Seq.empty)
 
-        def to[T](key: String, f: String => T) =
-          header(key).map(_.split(",").map(f).toSet).getOrElse(Set.empty)
-
-        val js = to(Javascript.name, Javascript.apply)
-        val jsTop = to(Javascript.nameTop, Javascript.apply)
-        val css = to(Css.name, Css.apply)
-
-        val metaTags = header(MetaTag.name).map(_.split(",").flatMap { s =>
-          serializer.deserialize[MetaTag](s).fold(e => {
-            log.error(e.msg)
-            None
-          }, s => Some(s))
-        }.toSeq).getOrElse(Seq.empty).toSet
-
-        val cookies = header(HeaderNames.SET_COOKIE).map(Cookies.decodeSetCookieHeader).getOrElse(Seq.empty)
-
-        (result.body.consumeData, js, jsTop, css, cookies, metaTags)
-      }.flatMap { case (eventualByteString, js, jsTop, css, cookies, metaTags) =>
+        (result.body.consumeData, cookies)
+      }.flatMap { case (eventualByteString, cookies) =>
         eventualByteString.map { byteString =>
-          PageletResult(byteString.utf8String, js, jsTop, css, cookies, metaTags)
+          PageletResult(byteString.utf8String, leaf.javascript, leaf.javascriptTop, leaf.css, cookies, leaf.metaTags)
         }
       }
 

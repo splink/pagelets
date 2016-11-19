@@ -6,8 +6,6 @@ class PageletsAssembly extends Pagelets
   with LeafBuilderImpl
   with LeafToolsImpl
   with TreeToolsImpl
-  with ResultToolsImpl
-  with SerializerImpl
   with ResourceActionsImpl
   with ResourcesImpl
   with VisualizerImpl
