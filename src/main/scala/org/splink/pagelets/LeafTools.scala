@@ -1,78 +1,57 @@
 package org.splink.pagelets
 
-import scala.language.implicitConversions
-import akka.stream.Materializer
-import org.splink.pagelets.Exceptions.TypeException
-import play.api.http.HeaderNames
-import play.api.mvc.{Action, AnyContent, Cookies, Request}
-import scala.concurrent.{ExecutionContext, Future}
+import org.splink.pagelets.Exceptions.{PageletException, TypeException}
+import play.api.mvc._
 
 trait LeafTools {
 
-  implicit def leafOps(leaf: Leaf[_, _]): LeafOps
+  def leafService: LeafService
 
-  trait LeafOps {
-    def execute(fi: FunctionInfo[_], args: Seq[Arg])(
-      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult]
+  trait LeafService {
+    def execute(id: Symbol, fi: FunctionInfo[_], args: Seq[Arg]): Either[PageletException, Action[AnyContent]]
   }
 
 }
-
 trait LeafToolsImpl extends LeafTools {
 
-  override implicit def leafOps(leaf: Leaf[_, _]): LeafOps = new LeafOpsImpl(leaf)
+  override def leafService: LeafService = new LeafServiceImpl
 
-  class LeafOpsImpl(leaf: Leaf[_, _]) extends LeafOps {
+  class LeafServiceImpl extends LeafService {
     type R = Action[AnyContent]
 
     val log = play.api.Logger("LeafTools")
 
     case class ArgError(msg: String)
 
-    override def execute(fi: FunctionInfo[_], args: Seq[Arg])(
-      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
+    override def execute(id: Symbol, fi: FunctionInfo[_], args: Seq[Arg]): Either[PageletException, Action[AnyContent]] =
       values(fi, args).fold(
-        err => Future.failed(TypeException(s"${leaf.id}: ${err.msg}")), {
+        err => Left(TypeException(s"$id: ${err.msg}")), {
           case Nil =>
-            fi.fnc.asInstanceOf[() => R]()
+            Right(fi.fnc.asInstanceOf[() => R]())
           case a :: Nil =>
-            fi.fnc.asInstanceOf[Any => R](a)
+            Right(fi.fnc.asInstanceOf[Any => R](a))
           case a :: b :: Nil =>
-            fi.fnc.asInstanceOf[(Any, Any) => R](a, b)
+            Right(fi.fnc.asInstanceOf[(Any, Any) => R](a, b))
           case a :: b :: c :: Nil =>
-            fi.fnc.asInstanceOf[(Any, Any, Any) => R](a, b, c)
+            Right(fi.fnc.asInstanceOf[(Any, Any, Any) => R](a, b, c))
           case a :: b :: c :: d :: Nil =>
-            fi.fnc.asInstanceOf[(Any, Any, Any, Any) => R](a, b, c, d)
+            Right(fi.fnc.asInstanceOf[(Any, Any, Any, Any) => R](a, b, c, d))
           case a :: b :: c :: d :: e :: Nil =>
-            fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any) => R](a, b, c, d, e)
+            Right(fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any) => R](a, b, c, d, e))
           case a :: b :: c :: d :: e :: f :: Nil =>
-            fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f)
+            Right(fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f))
           case a :: b :: c :: d :: e :: f :: g :: Nil =>
-            fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f, g)
+            Right(fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f, g))
           case a :: b :: c :: d :: e :: f :: g :: h :: Nil =>
-            fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f, g, h)
+            Right(fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f, g, h))
           case a :: b :: c :: d :: e :: f :: g :: h :: i :: Nil =>
-            fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f, g, h, i)
+            Right(fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f, g, h, i))
           case a :: b :: c :: d :: e :: f :: g :: h :: i :: j :: Nil =>
-            fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f, g, h, i, j)
+            Right(fi.fnc.asInstanceOf[(Any, Any, Any, Any, Any, Any, Any, Any, Any, Any) => R](a, b, c, d, e, f, g, h, i, j))
           case xs =>
-            Future.failed(new IllegalArgumentException(s"${leaf.id}: too many arguments: ${xs.size}"))
+            Left(TypeException(s"$id: too many arguments: ${xs.size}"))
         }
       )
-
-    implicit def transform(action: Action[AnyContent])(
-      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult] =
-      action(r).map { result =>
-
-        val cookies = result.header.headers.get(HeaderNames.SET_COOKIE).
-          map(Cookies.decodeSetCookieHeader).getOrElse(Seq.empty)
-
-        (result.body.consumeData, cookies)
-      }.flatMap { case (eventualByteString, cookies) =>
-        eventualByteString.map { byteString =>
-          PageletResult(byteString.utf8String, leaf.javascript, leaf.javascriptTop, leaf.css, cookies, leaf.metaTags)
-        }
-      }
 
     def values[T](info: FunctionInfo[T], args: Seq[Arg]): Either[ArgError, Seq[Any]] = eitherSeq {
       def predicate(name: String, typ: String, arg: Arg) =
@@ -89,15 +68,15 @@ trait LeafToolsImpl extends LeafTools {
     }
 
     def scalaClassNameFor(v: Any) = Option((v match {
-      case x: Int => Int.getClass
-      case x: Double => Double.getClass
-      case x: Float => Float.getClass
-      case x: Long => Long.getClass
-      case x: Short => Short.getClass
-      case x: Byte => Byte.getClass
-      case x: Boolean => Boolean.getClass
-      case x: Char => Char.getClass
-      case x: Some[_] => Option.getClass
+      case _: Int => Int.getClass
+      case _: Double => Double.getClass
+      case _: Float => Float.getClass
+      case _: Long => Long.getClass
+      case _: Short => Short.getClass
+      case _: Byte => Byte.getClass
+      case _: Boolean => Boolean.getClass
+      case _: Char => Char.getClass
+      case _: Some[_] => Option.getClass
       case None => Option.getClass
       case x: Any => x.getClass
     }).getCanonicalName).map(_.replaceAll("\\$", "")).getOrElse("undefined")

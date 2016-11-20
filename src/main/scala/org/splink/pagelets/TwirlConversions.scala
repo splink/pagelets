@@ -1,27 +1,54 @@
 package org.splink.pagelets
 
-import scala.language.implicitConversions
+import akka.stream.Materializer
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import play.api.Logger
 import play.api.mvc.Cookie
-import play.twirl.api.Html
+import play.twirl.api.{Html, HtmlFormat}
 
+import scala.concurrent.{ExecutionContext, Future}
+import scala.language.implicitConversions
 import scala.util.Try
 
 object TwirlConversions {
   private val log = Logger("TwirlConversions")
 
-  def combine(results: Seq[PageletResult])(template: Seq[Html] => Html) = {
-    val htmls = results.map(r => Html(r.body))
-    val htmlString = template(htmls).body
-    combineAssets(results)(htmlString)
+  def combine(results: Seq[PageletResult])(template: Seq[Html] => Html)(
+    implicit ec: ExecutionContext, m: Materializer): PageletResult = {
+
+    val htmls = Future.traverse(results) { r =>
+      r.body.runFold(HtmlFormat.empty)((acc, next) => Html(acc + next.utf8String))
+    }
+
+    val source = Source.fromFuture(htmls.map(xs => ByteString(template(xs).body)))
+
+    combineAssets(results)(source)
   }
 
-  private def combineAssets(results: Seq[PageletResult]): (String) => PageletResult = {
+  def combineStream(results: Seq[PageletResult])(template: Seq[HtmlStream] => HtmlStream)(
+    implicit ec: ExecutionContext, m: Materializer): PageletResult = {
+
+    val stream = template(results.map(r => HtmlStream(r.body.map(b => Html(b.utf8String)))))
+    val source = stream.source.map(s => ByteString(s.body))
+
+    combineAssets(results)(source)
+  }
+
+  private def combineAssets(results: Seq[PageletResult]): Source[ByteString, _] => PageletResult = {
     val (js, jsTop, css, cookies, metaTags) = results.foldLeft(
-      Seq.empty[Javascript], Seq.empty[Javascript], Seq.empty[Css], Seq.empty[Cookie], Seq.empty[MetaTag]) { (acc, next) =>
-      (acc._1 ++ next.js, acc._2 ++ next.jsTop, acc._3 ++ next.css,
-        (acc._4 ++ next.cookies).distinct, (acc._5 ++ next.metaTags).distinct)
+      Seq.empty[Javascript],
+      Seq.empty[Javascript],
+      Seq.empty[Css],
+      Seq.empty[Future[Seq[Cookie]]],
+      Seq.empty[MetaTag]) { (acc, next) =>
+      (acc._1 ++ next.js,
+        acc._2 ++ next.jsTop,
+        acc._3 ++ next.css,
+        acc._4 ++ next.cookies,
+        (acc._5 ++ next.metaTags).distinct)
     }
+
     PageletResult(_, js, jsTop, css, cookies, metaTags)
   }
 

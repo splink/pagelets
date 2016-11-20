@@ -1,14 +1,15 @@
 package org.splink.pagelets
 
 import akka.actor.ActorSystem
+import akka.stream.scaladsl.Source
 import akka.stream.{ActorMaterializer, Materializer}
+import akka.util.ByteString
 import helpers.FutureHelper
 import org.scalatest.{FlatSpec, Matchers}
 import play.api.mvc.{Action, AnyContent, Request, Results}
 import play.api.test.FakeRequest
 
-import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class PageBuilderTest extends FlatSpec with Matchers with FutureHelper {
 
@@ -29,29 +30,27 @@ class PageBuilderTest extends FlatSpec with Matchers with FutureHelper {
     ))
   ))
 
-  def delay[T](d: FiniteDuration)(f: Future[T]) =
-    akka.pattern.after(d, using = system.scheduler)(f)
-
+  def mkResult(body: String) = PageletResult(Source.single(ByteString(body)))
 
   val builder = new PageBuilderImpl with LeafBuilder {
     override val leafBuilderService = new LeafBuilderService {
       override def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId, isRoot: Boolean)(
         implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) =
-        delay((Math.random() * 5).toInt.millis)(Future.successful(PageletResult(leaf.id.name)))
+        mkResult(leaf.id.name)
     }
   }.builder
 
   def opsify(t: Tree) = new TreeToolsImpl {}.treeOps(t)
 
   "PageBuilder#builder" should "build a complete tree" in {
-    builder.build(tree).futureValue.body should equal("onethreefour")
+    builder.build(tree).body.consume should equal("onethreefour")
   }
 
   it should "build a subtree" in {
-    builder.build(opsify(tree).find('two).get).futureValue.body should equal("threefour")
+    builder.build(opsify(tree).find('two).get).body.consume should equal("threefour")
   }
 
   it should "build a leaf" in {
-    builder.build(opsify(tree).find('four).get).futureValue.body should equal("four")
+    builder.build(opsify(tree).find('four).get).body.consume should equal("four")
   }
 }

@@ -3,15 +3,16 @@ package org.splink.pagelets
 import akka.stream.Materializer
 import play.api.mvc.{AnyContent, Request}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 trait PageBuilder {
   def builder: PageBuilderService
 
   trait PageBuilderService {
     def build(pagelet: Pagelet, args: Arg*)(
-      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult]
+      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): PageletResult
   }
+
 }
 
 trait PageBuilderImpl extends PageBuilder {
@@ -24,17 +25,10 @@ trait PageBuilderImpl extends PageBuilder {
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
       val requestId = RequestId.create
 
-      def rec(p: Pagelet): Future[PageletResult] =
+      def rec(p: Pagelet): PageletResult =
         p match {
-          case t@Tree(id, children, _) =>
-            val start = System.currentTimeMillis()
-            log.info(s"$requestId Invoke pagelet ${p.id}")
-
-            Future.sequence(children.map(rec)).map(t.combine).map { result =>
-              log.info(s"$requestId Finish pagelet ${p.id} took ${System.currentTimeMillis() - start}ms")
-              result
-            }
-
+          case t@Tree(id, children, combiner) =>
+            combiner(children.map(rec))
           case l: Leaf[_, _] =>
             leafBuilderService.build(l, args, requestId, isRoot = p.id == l.id)
         }

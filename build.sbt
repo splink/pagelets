@@ -21,6 +21,7 @@ lazy val root = (project in file(".")).
       "-language:existentials")
   ) ++ publishSettings)
 
+
 import ReleaseTransformations._
 
 lazy val publishSettings = Seq(

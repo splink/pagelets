@@ -1,5 +1,7 @@
 package org.splink.pagelets
 
+import akka.stream.scaladsl.{Concat, Source}
+
 case class Arg(name: String, value: Any)
 
 sealed trait Pagelet {
@@ -25,11 +27,11 @@ object Tree {
   def combine(results: Seq[PageletResult]): PageletResult =
     results.foldLeft(PageletResult.empty) { (acc, next) =>
       PageletResult(
-        acc.body + next.body,
+        Source.combine(acc.body, next.body)(Concat.apply),
         acc.js ++ next.js,
         acc.jsTop ++ next.jsTop,
         acc.css ++ next.css,
-        (acc.cookies ++ next.cookies).distinct,
+        acc.cookies ++ next.cookies,
         (acc.metaTags ++ next.metaTags).distinct)
     }
 }
