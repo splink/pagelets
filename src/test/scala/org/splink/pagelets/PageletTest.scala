@@ -19,26 +19,7 @@ class PageletTest extends FlatSpec with Matchers {
 
     a should not equal b
   }
-  //TODO deduplication happens somewhere else now!
-/*
-  "Tree#combine" should "deduplicate metaTags" in {
-    val r1 = PageletResult(body("b1"), metaTags = Seq(MetaTag("meta", "tag"), MetaTag("meta", "tag")))
-    val r2 = PageletResult(body("b2"), metaTags = Seq(MetaTag("meta", "tag"), MetaTag("meta1", "tag1")))
 
-    val result = Tree.combine(Seq(r1, r2))
-
-    result.metaTags should equal(Seq(MetaTag("meta", "tag"), MetaTag("meta1", "tag1")))
-  }
-
-  it should "deduplicate cookies" in {
-    val r1 = PageletResult(body("b1"), cookies = Seq(Cookie("cookie", "v1"), Cookie("cookie", "v2")))
-    val r2 = PageletResult(body("b2"), cookies = Seq(Cookie("cookie", "v1"), Cookie("cookie", "v3")))
-
-    val result = Tree.combine(Seq(r1, r2))
-
-    result.cookies should equal(Seq(Cookie("cookie", "v1"), Cookie("cookie", "v2"), Cookie("cookie", "v3")))
-  }
-*/
   "Tree#equals" should "identify equal Tree nodes" in {
     val a = Tree('one, Seq.empty, Tree.combine)
     val b = Tree('one, Seq.empty, Tree.combine)

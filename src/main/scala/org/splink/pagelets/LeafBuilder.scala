@@ -2,6 +2,7 @@ package org.splink.pagelets
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import play.api.http.HeaderNames
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
@@ -73,9 +74,13 @@ trait LeafBuilderImpl extends LeafBuilder {
 
         val bodySource = Source.fromFuture(eventualBody)
 
-        PageletResult(bodySource, leaf.javascript, leaf.javascriptTop, leaf.css, Seq.empty, leaf.metaTags)
-      }
-      )
+        val cookies = eventualResult.map { result =>
+          result.header.headers.get(HeaderNames.SET_COOKIE).
+            map(Cookies.decodeSetCookieHeader).getOrElse(Seq.empty)
+        }
+
+        PageletResult(bodySource, leaf.javascript, leaf.javascriptTop, leaf.css, Seq(cookies), leaf.metaTags)
+      })
     }
   }
 }

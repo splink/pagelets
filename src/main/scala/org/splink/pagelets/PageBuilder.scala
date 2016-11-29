@@ -25,9 +25,8 @@ trait PageBuilderImpl extends PageBuilder {
       implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
       val requestId = RequestId.create
 
-      def rec(p: Pagelet): PageletResult =
-        p match {
-          case t@Tree(id, children, combiner) =>
+      def rec(p: Pagelet): PageletResult = p match {
+          case Tree(_, children, combiner) =>
             combiner(children.map(rec))
           case l: Leaf[_, _] =>
             leafBuilderService.build(l, args, requestId, isRoot = p.id == l.id)

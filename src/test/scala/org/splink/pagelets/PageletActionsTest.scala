@@ -77,7 +77,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       status(result) must equal(NOT_FOUND)
       contentAsString(result) must equal("'one does not exist")
     }
-    //TODO what if a failure of the root happens, currently there is no mechanism to deal with that
+    //lTODO what if a failure of the root happens, currently there is no mechanism to deal with that
 /*
     "return InternalServerError if the tree fails to build" in {
       val a = actions
