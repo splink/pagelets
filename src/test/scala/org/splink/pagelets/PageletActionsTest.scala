@@ -45,8 +45,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
     any[Leaf[_, _]],
     anyVararg[Arg])(
     any[ExecutionContext],
-    any[Request[AnyContent]],
-    any[Materializer])).thenReturn(ret)
+    any[Request[AnyContent]])).thenReturn(ret)
 
   "PageletAction" should {
     "return a Pagelet if the tree contains the pagelet for the given id" in {

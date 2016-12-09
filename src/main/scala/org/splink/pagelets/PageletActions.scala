@@ -30,6 +30,7 @@ case class ErrorPage(language: String,
                      exception: Throwable)
 
 trait PageletActions {
+  //TODO don't use twirl specific code
 
   def PageAction: PageActions
   def PageletAction: PageletActions

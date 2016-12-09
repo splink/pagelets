@@ -1,8 +1,8 @@
 package org.splink.pagelets
 
 import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import akka.stream.{ActorMaterializer, Materializer}
 import akka.util.ByteString
 import helpers.FutureHelper
 import org.scalatest.{FlatSpec, Matchers}
@@ -35,7 +35,7 @@ class PageBuilderTest extends FlatSpec with Matchers with FutureHelper {
   val builder = new PageBuilderImpl with LeafBuilder {
     override val leafBuilderService = new LeafBuilderService {
       override def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId, isRoot: Boolean)(
-        implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) =
+        implicit ec: ExecutionContext, r: Request[AnyContent]) =
         mkResult(leaf.id.name)
     }
   }.builder

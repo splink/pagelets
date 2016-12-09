@@ -1,6 +1,5 @@
 package org.splink.pagelets
 
-import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import play.api.http.HeaderNames
 import play.api.mvc._
@@ -14,7 +13,7 @@ trait LeafBuilder {
 
   trait LeafBuilderService {
     def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId, isRoot: Boolean)(
-      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): PageletResult
+      implicit ec: ExecutionContext, r: Request[AnyContent]): PageletResult
   }
 
 }
@@ -25,7 +24,7 @@ trait LeafBuilderImpl extends LeafBuilder {
     val log = play.api.Logger("LeafBuilder").logger
 
     override def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId, isRoot: Boolean)(
-      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
+      implicit ec: ExecutionContext, r: Request[AnyContent]) = {
       log.info(s"$requestId Invoke pagelet ${leaf.id}")
 
       def messageFor(t: Throwable) = if (Option(t.getMessage).isDefined) t.getMessage else "No message"
@@ -67,12 +66,11 @@ trait LeafBuilderImpl extends LeafBuilder {
           case Success(result) => result
         }
 
-        val eventualBody = eventualResult.flatMap { result =>
+        val bodySource = Source.fromFuture(eventualResult.map { result =>
           log.info(s"$requestId Finish pagelet ${leaf.id} took ${System.currentTimeMillis() - startTime}ms")
-          result.body.consumeData
-        }
+          result.body.dataStream
+        }).flatMapConcat(identity)
 
-        val bodySource = Source.fromFuture(eventualBody)
 
         val cookies = eventualResult.map { result =>
           result.header.headers.get(HeaderNames.SET_COOKIE).
