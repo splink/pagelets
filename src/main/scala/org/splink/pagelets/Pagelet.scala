@@ -27,7 +27,7 @@ object Tree {
   def combine(results: Seq[PageletResult]): PageletResult =
     results.foldLeft(PageletResult.empty) { (acc, next) =>
       PageletResult(
-        Source.combine(acc.body, next.body)(Concat.apply),
+        Source.combine(acc.body, next.body)(Concat.apply),//TODO offer a choice of merge strategy
         acc.js ++ next.js,
         acc.jsTop ++ next.jsTop,
         acc.css ++ next.css,

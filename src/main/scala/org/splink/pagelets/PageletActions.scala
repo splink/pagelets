@@ -6,7 +6,6 @@ import akka.util.ByteString
 import play.api.{Environment, Logger}
 import play.api.http.Writeable
 import play.api.mvc._
-import play.twirl.api.Html
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -17,7 +16,7 @@ case class Head(title: String,
 
 case class PageStream(language: String,
                       head: Head,
-                      body: HtmlStream,
+                      body: Source[ByteString, _],
                       js: Option[Fingerprint] = None)
 
 case class Page(language: String,
@@ -30,7 +29,6 @@ case class ErrorPage(language: String,
                      exception: Throwable)
 
 trait PageletActions {
-  //TODO don't use twirl specific code
 
   def PageAction: PageActions
   def PageletAction: PageletActions
@@ -40,7 +38,8 @@ trait PageletActions {
       title: String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], Page) => T)(
                              implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
 
-    def stream(title: String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], PageStream) => HtmlStream)(
+    def stream[T: Writeable](title: String, tree: RequestHeader => Pagelet, args: Arg*)(
+      template: (Request[_], PageStream) => Source[T, _])(
       implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
   }
 
@@ -58,8 +57,6 @@ trait PageletActionsImpl extends PageletActions {
 
   override val PageAction = new PageActions {
 
-    import HtmlStreamOps._
-
     override def async[T: Writeable](errorTemplate: ErrorPage => T)(
       title: String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], Page) => T)(
                                       implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
@@ -75,8 +72,9 @@ trait PageletActionsImpl extends PageletActions {
       }
     }
 
-    override def stream(title: String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], PageStream) => HtmlStream)(
+    override def stream[T: Writeable](title: String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], PageStream) => Source[T, _])(
       implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action { implicit request =>
+
       val result = builder.build(tree(request), args: _*)
       val page = mkPageStream(title, result)
 
@@ -121,17 +119,15 @@ trait PageletActionsImpl extends PageletActions {
 
       val cookies = Future.sequence(result.cookies).map(cookies => cookieJs(cookies.flatten))
 
-      Source.combine(result.body, Source.fromFuture(cookies))(Concat.apply)
+      Source.combine(result.body, Source.fromFuture(cookies))(Concat.apply).filter(_.nonEmpty)
     }
 
     def mkPageStream(title: String, result: PageletResult)(implicit ec: ExecutionContext, r: RequestHeader, env: Environment, m: Materializer) = {
       val (jsFinger, jsTopFinger, cssFinger) = updateResources(result)
 
-      val htmlSource = bodySourceWithCookies(result).map(body => Html(body.utf8String))
-
       PageStream(request2lang.language,
         Head(title, result.metaTags, jsTopFinger, cssFinger),
-        htmlSource,
+        bodySourceWithCookies(result),
         jsFinger)
     }
   }

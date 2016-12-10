@@ -26,6 +26,6 @@ object HtmlStreamFormat extends Format[HtmlStream] {
 }
 
 object HtmlStreamOps {
-  implicit def toSource(stream: HtmlStream): Source[Html, _] = stream.source.filter(!_.body.isEmpty)
+  implicit def toSource(stream: HtmlStream): Source[Html, _] = stream.source.filter(_.body.nonEmpty)
   implicit def toHtmlStream(source: Source[Html, _]): HtmlStream = HtmlStream(source)
 }

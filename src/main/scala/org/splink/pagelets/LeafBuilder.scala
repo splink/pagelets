@@ -66,6 +66,8 @@ trait LeafBuilderImpl extends LeafBuilder {
           case Success(result) => result
         }
 
+        //TODO return an either (fail in case of a failed root node)
+
         val bodySource = Source.fromFuture(eventualResult.map { result =>
           log.info(s"$requestId Finish pagelet ${leaf.id} took ${System.currentTimeMillis() - startTime}ms")
           result.body.dataStream
