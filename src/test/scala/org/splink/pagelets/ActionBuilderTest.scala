@@ -10,16 +10,16 @@ import play.api.mvc.{Action, Results}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
-class LeafToolsTest extends FlatSpec with Matchers with FutureHelper with EitherValues with MockitoSugar {
+class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with EitherValues with MockitoSugar {
 
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
   implicit val ec = system.dispatcher
   implicit val request = FakeRequest()
 
-  val tools = new LeafToolsImpl {}
+  val tools = new ActionBuilderImpl {}
 
-  "LeafTools#execute" should
+  "ActionService#execute" should
     "successfully produce an Action if FunctionInfo's types fit the args and it's fnc returns an Action[AnyContent]" in {
 
     def fnc(s: String) = Action(Results.Ok(s))
@@ -28,7 +28,7 @@ class LeafToolsTest extends FlatSpec with Matchers with FutureHelper with Either
 
     val args = Seq(Arg("s", "Hello!"))
 
-    val action = tools.leafService.execute('someId, info, args).right.get
+    val action = tools.actionService.execute('someId, info, args).right.get
     contentAsString(action(request)) should equal("Hello!")
   }
 
@@ -38,7 +38,7 @@ class LeafToolsTest extends FlatSpec with Matchers with FutureHelper with Either
 
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") :: Nil)
 
-    val result = tools.leafService.execute('someId, info, Seq.empty).left.get
+    val result = tools.actionService.execute('someId, info, Seq.empty).left.get
 
     result shouldBe a[TypeException]
     result.getMessage should equal("'someId: 's:java.lang.String' not found in Arguments()")
@@ -65,21 +65,21 @@ class LeafToolsTest extends FlatSpec with Matchers with FutureHelper with Either
     val args = Seq(Arg("s0", "s0"), Arg("s1", "s1"), Arg("s2", "s2"), Arg("s3", "s3"), Arg("s4", "s4"),
       Arg("s5", "s5"), Arg("s6", "s6"), Arg("s7", "s7"), Arg("s8", "s8"), Arg("s9", "s9"), Arg("s10", "s10"))
 
-    val result = tools.leafService.execute('someId, info, args).left.get
+    val result = tools.actionService.execute('someId, info, args).left.get
 
     result shouldBe a[TypeException]
     result.getMessage should equal("'someId: too many arguments: 11")
   }
 
-  def leafService = tools.leafService.asInstanceOf[LeafToolsImpl#LeafServiceImpl]
+  def actionService = tools.actionService.asInstanceOf[ActionBuilderImpl#ActionServiceImpl]
 
-  "LeafTools#values" should "extract the Arg values if the FunctionInfo.types align with the args" in {
+  "ActionService#values" should "extract the Arg values if the FunctionInfo.types align with the args" in {
     def fnc(s: String, d: Double) = s + d
 
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") ::("d", "scala.Double") :: Nil)
     val args = Seq(Arg("s", "hello"), Arg("d", 1d))
 
-    leafService.values(info, args).right.value should equal(Seq("hello", 1d))
+    actionService.values(info, args).right.value should equal(Seq("hello", 1d))
   }
 
   it should "extract the Arg values if there are more args then types" in {
@@ -88,7 +88,7 @@ class LeafToolsTest extends FlatSpec with Matchers with FutureHelper with Either
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") ::("d", "scala.Double") :: Nil)
     val args = Seq(Arg("s", "hello"), Arg("d", 1d), Arg("i", 1))
 
-    leafService.values(info, args).right.value should equal(Seq("hello", 1d))
+    actionService.values(info, args).right.value should equal(Seq("hello", 1d))
   }
 
   it should "yield an ArgError if the types do not match" in {
@@ -97,7 +97,7 @@ class LeafToolsTest extends FlatSpec with Matchers with FutureHelper with Either
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") ::("d", "scala.Int") :: Nil)
     val args = Seq(Arg("s", "hello"), Arg("d", 1d))
 
-    leafService.values(info, args).left.value.msg should equal(
+    actionService.values(info, args).left.value.msg should equal(
       "'d:scala.Int' not found in Arguments(s:java.lang.String,d:scala.Double)")
   }
 
@@ -107,7 +107,7 @@ class LeafToolsTest extends FlatSpec with Matchers with FutureHelper with Either
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") ::("i", "scala.Double") :: Nil)
     val args = Seq(Arg("s", "hello"), Arg("d", 1d))
 
-    leafService.values(info, args).left.value.msg should equal(
+    actionService.values(info, args).left.value.msg should equal(
       "'i:scala.Double' not found in Arguments(s:java.lang.String,d:scala.Double)"
     )
   }
@@ -118,95 +118,95 @@ class LeafToolsTest extends FlatSpec with Matchers with FutureHelper with Either
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") ::("d", "scala.Double") :: Nil)
     val args = Seq(Arg("s", "hello"))
 
-    leafService.values(info, args).left.value.msg should equal(
+    actionService.values(info, args).left.value.msg should equal(
       "'d:scala.Double' not found in Arguments(s:java.lang.String)"
     )
   }
 
-  "LeafTools#scalaClassNameFor" should "return the classname for Int" in {
-    val name = leafService.scalaClassNameFor(1)
+  "ActionService#scalaClassNameFor" should "return the classname for Int" in {
+    val name = actionService.scalaClassNameFor(1)
     name should equal("scala.Int")
   }
 
   it should "return the classname for String" in {
-    val name = leafService.scalaClassNameFor("123")
+    val name = actionService.scalaClassNameFor("123")
     name should equal("java.lang.String")
   }
 
   it should "return the classname for Double" in {
-    val name = leafService.scalaClassNameFor(1d)
+    val name = actionService.scalaClassNameFor(1d)
     name should equal("scala.Double")
   }
 
   it should "return the classname for Float" in {
-    val name = leafService.scalaClassNameFor(1f)
+    val name = actionService.scalaClassNameFor(1f)
     name should equal("scala.Float")
   }
 
   it should "return the classname for Long" in {
-    val name = leafService.scalaClassNameFor(1l)
+    val name = actionService.scalaClassNameFor(1l)
     name should equal("scala.Long")
   }
 
   it should "return the classname for Short" in {
-    val name = leafService.scalaClassNameFor(1.toShort)
+    val name = actionService.scalaClassNameFor(1.toShort)
     name should equal("scala.Short")
   }
 
   it should "return the classname for Byte" in {
-    val name = leafService.scalaClassNameFor(1.toByte)
+    val name = actionService.scalaClassNameFor(1.toByte)
     name should equal("scala.Byte")
   }
 
   it should "return the classname for Boolean" in {
-    val name = leafService.scalaClassNameFor(true)
+    val name = actionService.scalaClassNameFor(true)
     name should equal("scala.Boolean")
   }
 
   it should "return the classname for Char" in {
-    val name = leafService.scalaClassNameFor('a')
+    val name = actionService.scalaClassNameFor('a')
     name should equal("scala.Char")
   }
 
   it should "return the classname for Symbol" in {
-    val name = leafService.scalaClassNameFor('someSymbol)
+    val name = actionService.scalaClassNameFor('someSymbol)
     name should equal("scala.Symbol")
   }
 
   it should "return 'undefined' for any local class without a canonical name" in {
     case class Test(name: String)
-    val name = leafService.scalaClassNameFor(Test("yo"))
+    val name = actionService.scalaClassNameFor(Test("yo"))
     name should equal("undefined")
   }
 
   case class Test2(name: String)
 
   it should "return the classname for any custom class" in {
-    val name = leafService.scalaClassNameFor(Test2("yo"))
-    name should equal("org.splink.pagelets.LeafToolsTest.Test2")
+    val name = actionService.scalaClassNameFor(Test2("yo"))
+    name should equal("org.splink.pagelets.ActionBuilderTest.Test2")
   }
 
   it should "return the Option classname Some[_]" in {
-    val name = leafService.scalaClassNameFor(Option("yo"))
+    val name = actionService.scalaClassNameFor(Option("yo"))
     name should equal("scala.Option")
   }
 
   it should "return the Option classname for None" in {
-    val name = leafService.scalaClassNameFor(None)
+    val name = actionService.scalaClassNameFor(None)
     name should equal("scala.Option")
   }
 
-  "LeafTools#eitherSeq" should "convert the whole Seq if there are no Left" in {
+  "ActionService#eitherSeq" should "convert the whole Seq if there are no Left" in {
     val xs = Seq(Right("One"), Right("Two"), Right("Three"))
 
-    val result = leafService.eitherSeq(xs)
+    val result = actionService.eitherSeq(xs)
     result should equal(Right(Seq("One", "Two", "Three")))
   }
 
   it should "produce the last Left if the given Seq contains one" in {
     val xs = Seq(Right("One"), Left("Oops"), Left("Oops2"), Right("four"))
 
-    val result = leafService.eitherSeq(xs)
+    val result = actionService.eitherSeq(xs)
     result should equal(Left("Oops2"))
   }
 

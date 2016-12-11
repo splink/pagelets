@@ -19,7 +19,7 @@ trait LeafBuilder {
 }
 
 trait LeafBuilderImpl extends LeafBuilder {
-  self: LeafTools =>
+  self: ActionBuilder =>
   override val leafBuilderService = new LeafBuilderService {
     val log = play.api.Logger("LeafBuilder").logger
 
@@ -31,14 +31,14 @@ trait LeafBuilderImpl extends LeafBuilder {
 
       val startTime = System.currentTimeMillis()
 
-      leafService.execute(leaf.id, leaf.info, args).fold(t => {
+      actionService.execute(leaf.id, leaf.info, args).fold(t => {
         log.warn(s"$requestId TypeException in pagelet ${leaf.id} '${messageFor(t)}'")
         PageletResult.empty
       }, action => {
         def defaultFallback = Action(Results.Ok)
         def fallbackFnc = leaf.fallback.getOrElse(FunctionInfo(defaultFallback _, Nil))
 
-        def fallbackAction = leafService.execute(leaf.id, fallbackFnc, args).fold(t => {
+        def fallbackAction = actionService.execute(leaf.id, fallbackFnc, args).fold(t => {
           log.warn(s"$requestId TypeException in pagelet fallback ${leaf.id} '${messageFor(t)}'")
           // fallback failed
           defaultFallback

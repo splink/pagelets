@@ -1,6 +1,5 @@
 package org.splink.pagelets
 
-import akka.stream.Materializer
 import play.api.mvc.{AnyContent, Request}
 
 import scala.concurrent.ExecutionContext

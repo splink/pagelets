@@ -3,23 +3,23 @@ package org.splink.pagelets
 import org.splink.pagelets.Exceptions.{PageletException, TypeException}
 import play.api.mvc._
 
-trait LeafTools {
+trait ActionBuilder {
 
-  def leafService: LeafService
+  def actionService: ActionService
 
-  trait LeafService {
+  trait ActionService {
     def execute(id: Symbol, fi: FunctionInfo[_], args: Seq[Arg]): Either[PageletException, Action[AnyContent]]
   }
 
 }
-trait LeafToolsImpl extends LeafTools {
+trait ActionBuilderImpl extends ActionBuilder {
 
-  override def leafService: LeafService = new LeafServiceImpl
+  override def actionService: ActionService = new ActionServiceImpl
 
-  class LeafServiceImpl extends LeafService {
+  class ActionServiceImpl extends ActionService {
     type R = Action[AnyContent]
 
-    val log = play.api.Logger("LeafTools")
+    val log = play.api.Logger("ActionBuilder")
 
     case class ArgError(msg: String)
 

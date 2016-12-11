@@ -37,10 +37,10 @@ class LeafBuilderTest extends FlatSpec with Matchers with MockitoSugar with Futu
     body = Source.fromFuture(Future.successful(ByteString(body))),
     cookies = Seq(Future(Seq.empty)))
 
-  val builder = new LeafBuilderImpl with LeafTools {
-    val leafServiceMock = mock[LeafService]
+  val builder = new LeafBuilderImpl with ActionBuilder {
+    val leafServiceMock = mock[ActionService]
 
-    override implicit def leafService: LeafService = leafServiceMock
+    override implicit def actionService: ActionService = leafServiceMock
 
     when(leafServiceMock.execute(any[Symbol], any[FunctionInfo[_]], any[Seq[Arg]])).thenReturn(Right(Action(Results.Ok)))
 
