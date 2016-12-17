@@ -72,10 +72,9 @@ trait ResourcesImpl extends Resources {
   }
 
   private def mimeTypeFor(resource: Resource) = resource match {
-    case a: Javascript => JsMimeType
-    case a: Css => CssMimeType
+    case _: Javascript => JsMimeType
+    case _: Css => CssMimeType
   }
-
 
 }
 

@@ -13,7 +13,7 @@ trait ResourceActions {
 }
 
 trait ResourceActionsImpl extends ResourceActions { self: Resources =>
-  override def ResourceAction(fingerprint: String, validFor: Duration = 365.days) = EtagAction { request =>
+  override def ResourceAction(fingerprint: String, validFor: Duration = 365.days) = EtagAction { _ =>
     resources.contentFor(Fingerprint(fingerprint)).map { content =>
       Ok(content.body).as(content.mimeType.name).withHeaders(CacheHeaders(fingerprint, validFor): _*)
     }.getOrElse {

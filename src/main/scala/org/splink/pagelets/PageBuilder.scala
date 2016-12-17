@@ -19,17 +19,17 @@ trait PageBuilderImpl extends PageBuilder {
   override val builder = new PageBuilderService {
     val log = play.api.Logger("PageBuilder")
 
-    override def build(p: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent]) = {
+    override def build(pagelet: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent]) = {
       val requestId = RequestId.create
 
       def rec(p: Pagelet): PageletResult = p match {
           case Tree(_, children, combiner) =>
             combiner(children.map(rec))
           case l: Leaf[_, _] =>
-            leafBuilderService.build(l, args, requestId, isRoot = p.id == l.id)
+            leafBuilderService.build(l, args, requestId, isRoot = pagelet.id == l.id)
         }
 
-      rec(p)
+      rec(pagelet)
     }
   }
 
