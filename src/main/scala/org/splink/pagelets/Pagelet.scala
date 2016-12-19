@@ -9,17 +9,19 @@ sealed trait Pagelet {
 }
 
 case class Leaf[A, B] private(id: Symbol, info: FunctionInfo[A],
-                      fallback: Option[FunctionInfo[B]] = None,
-                      css: Seq[Css] = Seq.empty,
-                      javascript: Seq[Javascript] = Seq.empty,
-                      javascriptTop: Seq[Javascript] = Seq.empty,
-                      metaTags: Seq[MetaTag] = Seq.empty) extends Pagelet {
+                              fallback: Option[FunctionInfo[B]] = None,
+                              css: Seq[Css] = Seq.empty,
+                              javascript: Seq[Javascript] = Seq.empty,
+                              javascriptTop: Seq[Javascript] = Seq.empty,
+                              metaTags: Seq[MetaTag] = Seq.empty,
+                              isMandatory: Boolean = false) extends Pagelet {
 
   def withFallback(fallback: FunctionInfo[B]) = copy(fallback = Some(fallback))
   def withJavascript(js: Javascript*) = copy(javascript = Seq(js:_*))
   def withJavascriptTop(js: Javascript*) = copy(javascriptTop = Seq(js:_*))
   def withCss(css: Css*) = copy(css = Seq(css:_*))
   def withMetaTags(tags: MetaTag*) = copy(metaTags = Seq(tags:_*))
+  def setMandatory(value: Boolean) = copy(isMandatory = value)
   override def toString = s"Leaf(${id.name})"
 }
 
@@ -32,7 +34,8 @@ object Tree {
         acc.jsTop ++ next.jsTop,
         acc.css ++ next.css,
         acc.cookies ++ next.cookies,
-        (acc.metaTags ++ next.metaTags).distinct)
+        (acc.metaTags ++ next.metaTags).distinct,
+        acc.mandatoryFailedPagelets ++ next.mandatoryFailedPagelets)
     }
 }
 

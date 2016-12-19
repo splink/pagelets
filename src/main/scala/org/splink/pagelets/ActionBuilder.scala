@@ -19,8 +19,6 @@ trait ActionBuilderImpl extends ActionBuilder {
   class ActionServiceImpl extends ActionService {
     type R = Action[AnyContent]
 
-    val log = play.api.Logger("ActionBuilder")
-
     case class ArgError(msg: String)
 
     override def execute(id: Symbol, fi: FunctionInfo[_], args: Seq[Arg]): Either[PageletException, Action[AnyContent]] =

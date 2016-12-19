@@ -26,7 +26,7 @@ trait PageBuilderImpl extends PageBuilder {
           case Tree(_, children, combiner) =>
             combiner(children.map(rec))
           case l: Leaf[_, _] =>
-            leafBuilderService.build(l, args, requestId, isRoot = pagelet.id == l.id)
+            leafBuilderService.build(l, args, requestId)
         }
 
       rec(pagelet)

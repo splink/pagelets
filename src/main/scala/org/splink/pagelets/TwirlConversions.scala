@@ -36,20 +36,22 @@ object TwirlConversions {
   }
 
   private def combineAssets(results: Seq[PageletResult]): Source[ByteString, _] => PageletResult = {
-    val (js, jsTop, css, cookies, metaTags) = results.foldLeft(
+    val (js, jsTop, css, cookies, metaTags, failedPagelets) = results.foldLeft(
       Seq.empty[Javascript],
       Seq.empty[Javascript],
       Seq.empty[Css],
       Seq.empty[Future[Seq[Cookie]]],
-      Seq.empty[MetaTag]) { (acc, next) =>
+      Seq.empty[MetaTag],
+      Seq.empty[Future[Boolean]]) { (acc, next) =>
       (acc._1 ++ next.js,
         acc._2 ++ next.jsTop,
         acc._3 ++ next.css,
         acc._4 ++ next.cookies,
-        (acc._5 ++ next.metaTags).distinct)
+        (acc._5 ++ next.metaTags).distinct,
+        acc._6 ++ next.mandatoryFailedPagelets)
     }
 
-    PageletResult(_, js, jsTop, css, cookies, metaTags)
+    PageletResult(_, js, jsTop, css, cookies, metaTags, failedPagelets)
   }
 
   implicit def adapt[A, B](f: A => B): Seq[A] => B =

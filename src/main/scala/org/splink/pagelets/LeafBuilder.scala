@@ -1,10 +1,10 @@
 package org.splink.pagelets
 
 import akka.stream.scaladsl.Source
-import play.api.http.HeaderNames
+import play.api.http.{HeaderNames, Status}
 import play.api.mvc._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 
@@ -12,7 +12,7 @@ trait LeafBuilder {
   def leafBuilderService: LeafBuilderService
 
   trait LeafBuilderService {
-    def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId, isRoot: Boolean)(
+    def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId)(
       implicit ec: ExecutionContext, r: Request[AnyContent]): PageletResult
   }
 
@@ -23,25 +23,35 @@ trait LeafBuilderImpl extends LeafBuilder {
   override val leafBuilderService = new LeafBuilderService {
     val log = play.api.Logger("LeafBuilder").logger
 
-    override def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId, isRoot: Boolean)(
+    override def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId)(
       implicit ec: ExecutionContext, r: Request[AnyContent]) = {
       log.info(s"$requestId Invoke pagelet ${leaf.id}")
 
-      def messageFor(t: Throwable) = if (Option(t.getMessage).isDefined) t.getMessage else "No message"
+      def stacktraceFor(t: Throwable) = t.getStackTrace.map("    " + _).mkString("\n")
+
+      def messageFor(t: Throwable) = if (Option(t.getMessage).isDefined) {
+        t.getMessage + "\n" + stacktraceFor(t)
+      } else "No message\n" + stacktraceFor(t)
+
+      def mandatory = if(leaf.isMandatory) "mandatory" else ""
 
       val startTime = System.currentTimeMillis()
 
       actionService.execute(leaf.id, leaf.info, args).fold(t => {
-        log.warn(s"$requestId TypeException in pagelet ${leaf.id} '${messageFor(t)}'")
-        PageletResult.empty
+        log.warn(s"$requestId TypeException in $mandatory pagelet ${leaf.id} '${messageFor(t)}'")
+        PageletResult.empty.copy(mandatoryFailedPagelets = Seq(Future.successful(leaf.isMandatory)))
       }, action => {
-        def defaultFallback = Action(Results.Ok)
-        def fallbackFnc = leaf.fallback.getOrElse(FunctionInfo(defaultFallback _, Nil))
+
+        def lastFallback =
+          if (leaf.isMandatory) Action(Results.InternalServerError) else Action(Results.Ok)
+
+        def fallbackFnc =
+          leaf.fallback.getOrElse(FunctionInfo(lastFallback _, Nil))
 
         def fallbackAction = actionService.execute(leaf.id, fallbackFnc, args).fold(t => {
-          log.warn(s"$requestId TypeException in pagelet fallback ${leaf.id} '${messageFor(t)}'")
+          log.warn(s"$requestId TypeException in $mandatory pagelet fallback ${leaf.id} '${messageFor(t)}'")
           // fallback failed
-          defaultFallback
+          lastFallback
         }, action =>
           action
         )
@@ -50,8 +60,8 @@ trait LeafBuilderImpl extends LeafBuilder {
           action(r).recoverWith { case t =>
             log.warn(s"$requestId Exception in async pagelet ${leaf.id} '${messageFor(t)}'")
             fallbackAction(r).recoverWith { case _ =>
-              log.warn(s"$requestId Exception in async pagelet fallback ${leaf.id} '${messageFor(t)}'")
-              defaultFallback(r)
+              log.warn(s"$requestId Exception in $mandatory async pagelet fallback ${leaf.id} '${messageFor(t)}'")
+              lastFallback(r)
             }
           }
         } match {
@@ -60,26 +70,31 @@ trait LeafBuilderImpl extends LeafBuilder {
             Try(fallbackAction(r)) match {
               case Success(result) => result
               case Failure(_) =>
-                log.warn(s"$requestId Exception in pagelet fallback ${leaf.id} '${messageFor(t)}'")
-                defaultFallback(r)
+                log.warn(s"$requestId Exception in $mandatory pagelet fallback ${leaf.id} '${messageFor(t)}'")
+                lastFallback(r)
             }
           case Success(result) => result
         }
-
-        //TODO return an either (fail in case of a failed root node)
 
         val bodySource = Source.fromFuture(eventualResult.map { result =>
           log.info(s"$requestId Finish pagelet ${leaf.id} took ${System.currentTimeMillis() - startTime}ms")
           result.body.dataStream
         }).flatMapConcat(identity)
 
-
         val cookies = eventualResult.map { result =>
           result.header.headers.get(HeaderNames.SET_COOKIE).
             map(Cookies.decodeSetCookieHeader).getOrElse(Seq.empty)
         }
 
-        PageletResult(bodySource, leaf.javascript, leaf.javascriptTop, leaf.css, Seq(cookies), leaf.metaTags)
+        val hasMandatoryPageletFailed = Seq(eventualResult.map(_.header.status == Status.INTERNAL_SERVER_ERROR))
+
+        PageletResult(bodySource,
+          leaf.javascript,
+          leaf.javascriptTop,
+          leaf.css, Seq(cookies),
+          leaf.metaTags,
+          hasMandatoryPageletFailed
+        )
       })
     }
   }

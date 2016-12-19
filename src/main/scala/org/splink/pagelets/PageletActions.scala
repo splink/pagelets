@@ -24,9 +24,7 @@ case class Page(language: String,
                 body: String,
                 js: Option[Fingerprint] = None)
 
-case class ErrorPage(language: String,
-                     title: String,
-                     exception: Throwable)
+case class ErrorPage(language: String, title: String)
 
 trait PageletActions {
 
@@ -61,14 +59,21 @@ trait PageletActionsImpl extends PageletActions {
       title: String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], Page) => T)(
                                       implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
       val result = builder.build(tree(request), args: _*)
-      mkPage(title, result).flatMap { page =>
-        Future.sequence(result.cookies).map { cookies =>
+
+      (for {
+        page <- mkPage(title, result)
+        cookies <- Future.sequence(result.cookies)
+        mandatoryPageletFailed <- Future.sequence(result.mandatoryFailedPagelets)
+      } yield {
+        if(mandatoryPageletFailed.forall(!_))
           Ok(template(request, page)).withCookies(cookies.flatten.distinct: _*)
-        }
-      }.recover {
+        else
+          InternalServerError(errorTemplate(ErrorPage(request2lang.language, title)))
+
+      }).recover {
         case e: Throwable =>
           log.error(s"$e")
-          InternalServerError(errorTemplate(ErrorPage(request2lang.language, title, e)))
+          InternalServerError(errorTemplate(ErrorPage(request2lang.language, title)))
       }
     }
 
