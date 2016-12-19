@@ -24,15 +24,13 @@ case class Page(language: String,
                 body: String,
                 js: Option[Fingerprint] = None)
 
-case class ErrorPage(language: String, title: String)
-
 trait PageletActions {
 
   def PageAction: PageActions
   def PageletAction: PageletActions
 
   trait PageActions {
-    def async[T: Writeable](errorTemplate: ErrorPage => T)(
+    def async[T: Writeable](onError: => Call)(
       title: String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], Page) => T)(
                              implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
 
@@ -42,7 +40,7 @@ trait PageletActions {
   }
 
   trait PageletActions {
-    def async[T: Writeable](errorTemplate: ErrorPage => T)(
+    def async[T: Writeable](onError: => Call)(
       plan: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
                              implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
   }
@@ -55,7 +53,7 @@ trait PageletActionsImpl extends PageletActions {
 
   override val PageAction = new PageActions {
 
-    override def async[T: Writeable](errorTemplate: ErrorPage => T)(
+    override def async[T: Writeable](onError: => Call)(
       title: String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], Page) => T)(
                                       implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
       val result = builder.build(tree(request), args: _*)
@@ -68,12 +66,12 @@ trait PageletActionsImpl extends PageletActions {
         if(mandatoryPageletFailed.forall(!_))
           Ok(template(request, page)).withCookies(cookies.flatten.distinct: _*)
         else
-          InternalServerError(errorTemplate(ErrorPage(request2lang.language, title)))
+          Redirect(onError, TEMPORARY_REDIRECT)
 
       }).recover {
         case e: Throwable =>
           log.error(s"$e")
-          InternalServerError(errorTemplate(ErrorPage(request2lang.language, title)))
+          Redirect(onError, TEMPORARY_REDIRECT)
       }
     }
 
@@ -138,7 +136,7 @@ trait PageletActionsImpl extends PageletActions {
   }
 
   override val PageletAction = new PageletActions {
-    override def async[T: Writeable](errorTemplate: ErrorPage => T)(
+    override def async[T: Writeable](onError: => Call)(
       plan: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
                                       implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { request =>
       plan(request).find(id).map { p =>
@@ -146,7 +144,7 @@ trait PageletActionsImpl extends PageletActions {
           Arg(key, values.head)
         }.toSeq
 
-        PageAction.async(errorTemplate)(id.name, _ => p, args: _*)(template).apply(request)
+        PageAction.async(onError)(id.name, _ => p, args: _*)(template).apply(request)
       }.getOrElse {
         Future.successful(NotFound(s"$id does not exist"))
       }

@@ -46,13 +46,15 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       any[ExecutionContext],
       any[Request[AnyContent]])).thenReturn(result)
 
+  val onError = Call("get", "error")
+
   "PageletAction" should {
     "return a Pagelet if the tree contains the pagelet for the given id" in {
       val a = actions
       when(a.opsMock.find('one)).thenReturn(Some(leaf))
       buildMock(a.builder)(mkResult("body"))
 
-      val action = a.PageletAction.async(e => Html(s"${e.title}"))(tree, 'one) { (_, page) =>
+      val action = a.PageletAction.async(onError)(tree, 'one) { (_, page) =>
         Html(s"${page.body}")
       }
 
@@ -67,7 +69,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       when(a.opsMock.find('one)).thenReturn(None)
       buildMock(a.builder)(mkResult("body"))
 
-      val action = a.PageletAction.async(e => Html(s"${e.title}"))(tree, 'one) { (_, page) =>
+      val action = a.PageletAction.async(onError)(tree, 'one) { (_, page) =>
         Html(s"${page.body}")
       }
 
@@ -76,22 +78,17 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       contentAsString(result) must equal("'one does not exist")
     }
 
-    "invoke the error template if a pagelet declared as mandatory fails" in {
+    "redirect if a pagelet declared as mandatory fails" in {
       val a = actions
       when(a.opsMock.find('one)).thenReturn(Some(leaf))
       buildMock(a.builder)(mkResult("").copy(mandatoryFailedPagelets = Seq(Future.successful(true))))
 
-      def errorTemplate(e: ErrorPage)(implicit r: RequestHeader) = {
-        Html(s"${e.title} uri: ${request.uri}")
-      }
-
-      val action = a.PageletAction.async(errorTemplate)(tree, 'one) { (_, page) =>
+      val action = a.PageletAction.async(onError)(tree, 'one) { (_, page) =>
         Html(s"${page.body}")
       }
 
       val result = action(request)
-      status(result) must equal(INTERNAL_SERVER_ERROR)
-      contentAsString(result) must equal("one uri: /")
+      status(result) must equal(TEMPORARY_REDIRECT)
     }
 
   }
@@ -101,7 +98,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       val a = actions
       buildMock(a.builder)(mkResult("body"))
 
-      val action = a.PageAction.async(e => Html(s"${e.title}"))("title", tree) { (_, page) =>
+      val action = a.PageAction.async(onError)("title", tree) { (_, page) =>
         Html(s"${page.body}")
       }
 
@@ -115,15 +112,12 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       val a = actions
       buildMock(a.builder)(mkResult("").copy(mandatoryFailedPagelets = Seq(Future.successful(true))))
 
-      def errorTemplate(e: ErrorPage)(implicit r: RequestHeader) = Html(s"${e.title} uri: ${r.uri}")
-
-      val action = a.PageAction.async(errorTemplate)("title", tree) { (_, page) =>
+      val action = a.PageAction.async(onError)("title", tree) { (_, page) =>
         Html(s"${page.body}")
       }
 
       val result = action(request)
-      status(result) must equal(INTERNAL_SERVER_ERROR)
-      contentAsString(result) must equal("title uri: /")
+      status(result) must equal(TEMPORARY_REDIRECT)
     }
 
   }
@@ -142,7 +136,7 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       contentAsString(result) must equal("body")
     }
 
-    // when the page is streamed, it's too late to set the status code header to InternalServerError
+    // when the page is streamed, it's too late to redirect
     "return a Page if a pagelet declared as mandatory fails" in {
       val a = actions
       buildMock(a.builder)(mkResult("body").copy(mandatoryFailedPagelets = Seq(Future.successful(true))))
