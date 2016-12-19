@@ -18,9 +18,9 @@ class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with Ei
   implicit val request = FakeRequest()
 
   val tools = new ActionBuilderImpl {}
-//TODO test optional parameter
+
   "ActionService#execute" should
-    "successfully produce an Action if FunctionInfo's types fit the args and it's fnc returns an Action[AnyContent]" in {
+    "produce an Action if FunctionInfo's types fit the args with primitive args" in {
 
     def fnc(s: String) = Action(Results.Ok(s))
 
@@ -30,6 +30,30 @@ class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with Ei
 
     val action = tools.actionService.execute('someId, info, args).right.get
     contentAsString(action(request)) should equal("Hello!")
+  }
+
+  it should "produce an Action if FunctionInfo's types fit the args with optional args" in {
+
+    def fnc(o: Option[String]) = Action(Results.Ok(o.toString))
+
+    val info = FunctionInfo(fnc _, ("o", "scala.Option") :: Nil)
+
+    val args = Seq(Arg("o", Some("optional")))
+
+    val action = tools.actionService.execute('someId, info, args).right.get
+    contentAsString(action(request)) should equal("Some(optional)")
+  }
+
+  it should "produce an Action if FunctionInfo's types fit the args with multiple different args" in {
+
+    def fnc(i: Int, o: Option[String], custom: Test2) = Action(Results.Ok(i.toString + o.toString + custom.toString))
+
+    val info = FunctionInfo(fnc _, ("i", "scala.Int") :: ("o", "scala.Option") :: ("custom", "org.splink.pagelets.ActionBuilderTest.Test2") :: Nil)
+
+    val args = Seq(Arg("i", 1), Arg("o", Some("optional")), Arg("custom", Test2("custom")))
+
+    val action = tools.actionService.execute('someId, info, args).right.get
+    contentAsString(action(request)) should equal("1Some(optional)Test2(custom)")
   }
 
   it should "produce a TypeException if FunctionInfo's types do not fit the supplied args" in {
