@@ -3,10 +3,7 @@ package org.splink.pagelets
 import akka.stream.scaladsl.{Concat, Source}
 import play.twirl.api.{Appendable, Format, Html, HtmlFormat}
 
-class HtmlStream(val source: Source[Html, _]) extends Appendable[HtmlStream] {
-  def andThen(other: HtmlStream): HtmlStream =
-    HtmlStream(Source.combine(source, other.source)(Concat.apply))
-}
+class HtmlStream(val source: Source[Html, _]) extends Appendable[HtmlStream]
 
 case object HtmlStream {
   def apply(source: Source[Html, _]) = new HtmlStream(source)
@@ -22,10 +19,19 @@ object HtmlStreamFormat extends Format[HtmlStream] {
   def empty: HtmlStream = raw("")
 
   def fill(elements: scala.collection.immutable.Seq[HtmlStream]): HtmlStream =
-    if(elements.isEmpty) HtmlStreamFormat.empty else elements.reduce((acc, next) => acc.andThen(next))
+    if (elements.isEmpty) HtmlStreamFormat.empty else elements.reduce((acc, next) =>
+      HtmlStream {
+        Source.combine(acc.source, next.source)(Concat.apply)
+      })
 }
 
 object HtmlStreamOps {
   implicit def toSource(stream: HtmlStream): Source[Html, _] = stream.source.filter(_.body.nonEmpty)
   implicit def toHtmlStream(source: Source[Html, _]): HtmlStream = HtmlStream(source)
+
+
+  implicit def pageStream2HtmlPageStream(page: PageStream): HtmlPageStream =
+    HtmlPageStream(page.language, page.head, HtmlStream(page.body.map(b => Html(b.utf8String))), page.js)
 }
+
+case class HtmlPageStream(language: String, head: Head, body: HtmlStream, js: Option[Fingerprint] = None)

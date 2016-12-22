@@ -6,12 +6,11 @@ import akka.util.ByteString
 import play.api.Logger
 import play.api.mvc.Cookie
 import play.twirl.api.{Html, HtmlFormat}
-
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 import scala.util.Try
 
-object TwirlConversions {
+object TwirlCombiners {
   private val log = Logger("TwirlConversions")
 
   def combine(results: Seq[PageletResult])(template: Seq[Html] => Html)(
@@ -29,7 +28,10 @@ object TwirlConversions {
   def combineStream(results: Seq[PageletResult])(template: Seq[HtmlStream] => HtmlStream)(
     implicit ec: ExecutionContext, m: Materializer): PageletResult = {
 
-    val stream = template(results.map(r => HtmlStream(r.body.map(b => Html(b.utf8String)))))
+    def toHtmlStream(results: Seq[PageletResult]) =
+      results.map(r => HtmlStream(r.body.map(b => Html(b.utf8String))))
+
+    val stream = template(toHtmlStream(results))
     val source = stream.source.map(s => ByteString(s.body))
 
     combineAssets(results)(source)
