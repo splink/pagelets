@@ -1,7 +1,11 @@
-package org.splink.pagelets
+package org.splink.pagelets.twirl
 
 import akka.stream.scaladsl.{Concat, Source}
+import org.splink.pagelets.{Fingerprint, Head, PageStream}
 import play.twirl.api.{Appendable, Format, Html, HtmlFormat}
+
+
+case class HtmlPageStream(language: String, head: Head, body: HtmlStream, js: Option[Fingerprint] = None)
 
 class HtmlStream(val source: Source[Html, _]) extends Appendable[HtmlStream]
 
@@ -27,6 +31,7 @@ object HtmlStreamFormat extends Format[HtmlStream] {
 
 object HtmlStreamOps {
   implicit def toSource(stream: HtmlStream): Source[Html, _] = stream.source.filter(_.body.nonEmpty)
+
   implicit def toHtmlStream(source: Source[Html, _]): HtmlStream = HtmlStream(source)
 
 
@@ -34,4 +39,3 @@ object HtmlStreamOps {
     HtmlPageStream(page.language, page.head, HtmlStream(page.body.map(b => Html(b.utf8String))), page.js)
 }
 
-case class HtmlPageStream(language: String, head: Head, body: HtmlStream, js: Option[Fingerprint] = None)

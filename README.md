@@ -65,8 +65,8 @@ routesImport += "org.splink.pagelets.Binders._"
 
 If you want to use streaming, you will also need:
 ~~~scala
-TwirlKeys.templateFormats ++= Map("stream" -> "org.splink.pagelets.HtmlStreamFormat")
-TwirlKeys.templateImports ++= Vector("org.splink.pagelets.HtmlStream", "org.splink.pagelets.HtmlStreamFormat")
+TwirlKeys.templateFormats ++= Map("stream" -> "org.splink.pagelets.twirl.HtmlStreamFormat")
+TwirlKeys.templateImports ++= Vector("org.splink.pagelets.twirl.HtmlStream", "org.splink.pagelets.twirl.HtmlStreamFormat")
 ~~~
 this adds streaming capabilities to the Twirl template engine. To use the streaming template format, you must name your
 templates *name.scala.stream* instead of *name.scala.html*
@@ -89,11 +89,11 @@ import pagelets._
 
 To use the Play's Twirl template engine, import TwirlConversions
 ~~~scala
-import org.splink.pagelets.TwirlCombiners._
+import org.splink.pagelets.twirl.TwirlCombiners._
 ~~~
 To use Streaming, additionally import HtmlStreamOps
 ~~~scala
-import org.splink.pagelets.HtmlStreamOps._
+import org.splink.pagelets.twirl.HtmlStreamOps._
 ~~~
 
 Now create the main template inside the *views* folder.

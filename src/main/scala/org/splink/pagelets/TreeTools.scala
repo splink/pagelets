@@ -1,7 +1,8 @@
 package org.splink.pagelets
 
-import scala.language.implicitConversions
 import play.api.mvc.{Action, Results}
+
+import scala.language.implicitConversions
 
 trait TreeTools {
   implicit def treeOps(tree: Tree): TreeOps
@@ -11,15 +12,13 @@ trait TreeTools {
     def replace(id: Symbol, other: Pagelet): Tree
     def find(id: Symbol): Option[Pagelet]
   }
-
 }
 
 trait TreeToolsImpl extends TreeTools {
-  val log = play.api.Logger("TreeTools")
-
   override implicit def treeOps(tree: Tree): TreeOps = new TreeOpsImpl(tree)
 
   class TreeOpsImpl(tree: Tree) extends TreeOps {
+    val log = play.api.Logger("TreeTools")
 
     override def find(id: Symbol): Option[Pagelet] = {
       def rec(p: Pagelet): Option[Pagelet] = p match {

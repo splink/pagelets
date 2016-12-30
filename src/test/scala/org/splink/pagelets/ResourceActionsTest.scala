@@ -1,5 +1,7 @@
 package org.splink.pagelets
 
+import org.mockito.Matchers._
+import org.mockito.Mockito._
 import org.scalatest.mock.MockitoSugar
 import org.scalatestplus.play._
 import play.api.Environment
@@ -7,8 +9,7 @@ import play.api.http.HeaderNames
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
-import org.mockito.Matchers._
-import org.mockito.Mockito._
+import scala.language.reflectiveCalls
 
 class ResourceActionsTest extends PlaySpec with MockitoSugar {
   implicit val env = Environment.simple()

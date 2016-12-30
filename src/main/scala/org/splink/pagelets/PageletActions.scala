@@ -3,9 +3,9 @@ package org.splink.pagelets
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Concat, Source}
 import akka.util.ByteString
-import play.api.{Environment, Logger}
 import play.api.http.Writeable
 import play.api.mvc._
+import play.api.{Environment, Logger}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -49,7 +49,7 @@ trait PageletActions {
 
 trait PageletActionsImpl extends PageletActions {
   self: Controller with PageBuilder with TreeTools with Resources =>
-  private val log = Logger("PageletActions").logger
+  val log = Logger("PageletActions")
 
   override val PageAction = new PageActions {
 
@@ -87,9 +87,7 @@ trait PageletActionsImpl extends PageletActions {
     def mkPage(title: String, result: PageletResult)(implicit ec: ExecutionContext, r: RequestHeader, env: Environment, m: Materializer) = {
       val (jsFinger, jsTopFinger, cssFinger) = updateResources(result)
 
-      val eventualBody = result.body.runFold("") { (acc, next) =>
-        acc + next.utf8String
-      }
+      val eventualBody = result.body.runFold("")(_ + _.utf8String)
 
       eventualBody.map { body =>
         Page(request2lang.language,

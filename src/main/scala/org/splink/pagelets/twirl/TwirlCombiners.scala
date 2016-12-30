@@ -1,11 +1,13 @@
-package org.splink.pagelets
+package org.splink.pagelets.twirl
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import org.splink.pagelets._
 import play.api.Logger
 import play.api.mvc.Cookie
 import play.twirl.api.{Html, HtmlFormat}
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 import scala.util.Try
