@@ -10,7 +10,7 @@ trait VisualizerImpl extends Visualizer {
       case t: Tree =>
         val a = space(layer) + t.id.name + "\n"
         a + t.children.map(c => rec(c, layer + 1)).mkString
-      case Leaf(id, fnc, _) =>
+      case Leaf(id, fnc, _, _, _, _, _, _) =>
         space(layer) + id.name + mkArgsString(fnc) + "\n"
     }
 

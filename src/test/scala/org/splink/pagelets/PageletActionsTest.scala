@@ -1,21 +1,21 @@
 package org.splink.pagelets
 
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import org.mockito.Matchers._
 import org.mockito.Mockito._
 import org.scalatest.mock.MockitoSugar
 import org.scalatestplus.play.{OneAppPerSuite, PlaySpec}
-import org.splink.pagelets.Exceptions.PageletException
 import play.api.Environment
 import play.api.mvc._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import play.twirl.api.Html
-import scala.language.reflectiveCalls
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.implicitConversions
+import scala.language.{implicitConversions, reflectiveCalls}
 
 class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar {
   implicit val system = ActorSystem()
@@ -37,20 +37,24 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
   def leaf = mock[Leaf[_,_]]
   def tree(r: RequestHeader) = mock[Tree]
 
-  def buildMock(service: PageBuilder#PageBuilderService)(ret: Future[PageletResult]) = when(service.build(
-    any[Leaf[_, _]],
-    anyVararg[Arg])(
-    any[ExecutionContext],
-    any[Request[AnyContent]],
-    any[Materializer])).thenReturn(ret)
+  def mkResult(body: String) = PageletResult(Source.single(ByteString(body)))
+
+  def buildMock(service: PageBuilder#PageBuilderService)(result: PageletResult) =
+    when(service.build(
+      any[Leaf[_, _]],
+      anyVararg[Arg])(
+      any[ExecutionContext],
+      any[Request[AnyContent]])).thenReturn(result)
+
+  val onError = Call("get", "error")
 
   "PageletAction" should {
     "return a Pagelet if the tree contains the pagelet for the given id" in {
       val a = actions
       when(a.opsMock.find('one)).thenReturn(Some(leaf))
-      buildMock(a.builder)(Future.successful(PageletResult("body")))
+      buildMock(a.builder)(mkResult("body"))
 
-      val action = a.PageletAction(e => Html(s"${e.exception.getMessage}"))(tree, 'one) { (r, page) =>
+      val action = a.PageletAction.async(onError)(tree, 'one) { (_, page) =>
         Html(s"${page.body}")
       }
 
@@ -63,9 +67,9 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
     "return NotFound if the tree does not contain a pagelet for the given id" in {
       val a = actions
       when(a.opsMock.find('one)).thenReturn(None)
-      buildMock(a.builder)(Future.successful(PageletResult("body")))
+      buildMock(a.builder)(mkResult("body"))
 
-      val action = a.PageletAction(e => Html(s"${e.exception.getMessage}"))(tree, 'one) { (r, page) =>
+      val action = a.PageletAction.async(onError)(tree, 'one) { (_, page) =>
         Html(s"${page.body}")
       }
 
@@ -74,28 +78,27 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       contentAsString(result) must equal("'one does not exist")
     }
 
-    "return InternalServerError if the tree fails to build" in {
+    "redirect if a pagelet declared as mandatory fails" in {
       val a = actions
       when(a.opsMock.find('one)).thenReturn(Some(leaf))
-      buildMock(a.builder)(Future.failed(new PageletException("something is wrong")))
+      buildMock(a.builder)(mkResult("").copy(mandatoryFailedPagelets = Seq(Future.successful(true))))
 
-      val action = a.PageletAction(e => Html(s"${e.exception.getMessage}"))(tree, 'one) { (r, page) =>
+      val action = a.PageletAction.async(onError)(tree, 'one) { (_, page) =>
         Html(s"${page.body}")
       }
 
       val result = action(request)
-      status(result) must equal(INTERNAL_SERVER_ERROR)
-      contentAsString(result) must equal("something is wrong")
+      status(result) must equal(TEMPORARY_REDIRECT)
     }
 
   }
 
-  "PageAction" should {
-    "return a Pagelet" in {
+  "PageAction#async" should {
+    "return a Page" in {
       val a = actions
-      buildMock(a.builder)(Future.successful(PageletResult("body")))
+      buildMock(a.builder)(mkResult("body"))
 
-      val action = a.PageAction(e => Html(s"${e.exception.getMessage}"))("title", tree) { (r, page) =>
+      val action = a.PageAction.async(onError)("title", tree) { (_, page) =>
         Html(s"${page.body}")
       }
 
@@ -105,18 +108,62 @@ class PageletActionsTest extends PlaySpec with OneAppPerSuite with MockitoSugar 
       contentAsString(result) must equal("body")
     }
 
-    "return InternalServerError if the tree fails to build" in {
+    "invoke the error template if a pagelet declared as mandatory fails" in {
       val a = actions
-      buildMock(a.builder)(Future.failed(new PageletException("something is wrong")))
+      buildMock(a.builder)(mkResult("").copy(mandatoryFailedPagelets = Seq(Future.successful(true))))
 
-      val action = a.PageAction(e => Html(s"${e.exception.getMessage}"))("title", tree) { (r, page) =>
+      val action = a.PageAction.async(onError)("title", tree) { (_, page) =>
         Html(s"${page.body}")
       }
 
       val result = action(request)
-      status(result) must equal(INTERNAL_SERVER_ERROR)
-      contentAsString(result) must equal("something is wrong")
+      status(result) must equal(TEMPORARY_REDIRECT)
     }
 
+  }
+
+  "PageAction#stream" should {
+    "return a Page" in {
+      val a = actions
+      buildMock(a.builder)(mkResult("body"))
+
+      val action = a.PageAction.stream("title", tree) { (_, page) =>
+        page.body.map(b => Html(b.utf8String))
+      }
+
+      val result = action(request)
+      status(result) must equal(OK)
+      contentAsString(result) must equal("body")
+    }
+
+    // when the page is streamed, it's too late to redirect
+    "return a Page if a pagelet declared as mandatory fails" in {
+      val a = actions
+      buildMock(a.builder)(mkResult("body").copy(mandatoryFailedPagelets = Seq(Future.successful(true))))
+
+      val action = a.PageAction.stream("title", tree) { (_, page) =>
+        page.body.map(b => Html(b.utf8String))
+      }
+
+      val result = action(request)
+      status(result) must equal(OK)
+      contentAsString(result) must equal("body")
+    }
+
+    "return a Page with Cookies" in {
+      val a = actions
+      buildMock(a.builder)(
+        mkResult("body").copy(
+          cookies = Seq(Future.successful(Seq(Cookie("name", "value"))))))
+
+      val action = a.PageAction.stream("title", tree) { (_, page) =>
+        page.body.map(b => Html(b.utf8String))
+      }
+
+      val result = action(request)
+      status(result) must equal(OK)
+      contentAsString(result) must include("body")
+      contentAsString(result) must include("setCookie('name', 'value'")
+    }
   }
 }

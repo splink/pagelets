@@ -8,8 +8,7 @@ trait Pagelets
     with PageBuilder
     with ResourceActions
     with Visualizer
-    with TreeTools
-    with ResultTools {
+    with TreeTools {
 
   import scala.language.experimental.macros
 

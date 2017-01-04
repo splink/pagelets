@@ -2,18 +2,17 @@ package org.splink.pagelets
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import helpers.FutureHelper
-import org.mockito.Mockito._
-import org.scalatest.mock.MockitoSugar
 import org.scalatest.{FlatSpec, Matchers}
-import org.splink.pagelets.Exceptions.NoFallbackException
 import play.api.mvc.{Action, Results}
 import play.api.test.FakeRequest
 
 import scala.concurrent.Future
 import scala.language.implicitConversions
 
-class LeafBuilderTest extends FlatSpec with Matchers with FutureHelper with MockitoSugar {
+class LeafBuilderTest extends FlatSpec with Matchers with FutureHelper {
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
   implicit val ec = system.dispatcher
@@ -23,7 +22,7 @@ class LeafBuilderTest extends FlatSpec with Matchers with FutureHelper with Mock
 
   case class TestException(msg: String) extends RuntimeException
 
-  val failedAction = Action { r =>
+  val failedAction = Action { _ =>
     throw TestException("sync fail")
   }
 
@@ -31,114 +30,130 @@ class LeafBuilderTest extends FlatSpec with Matchers with FutureHelper with Mock
     throw TestException("async fail")
   })
 
-  val builder = new LeafBuilderImpl with LeafTools with Serializer {
-    override val serializer: SerializerService = mock[SerializerService]
+  def mkResult(body: String) = PageletResult(
+    body = Source.fromFuture(Future.successful(ByteString(body))),
+    cookies = Seq(Future(Seq.empty)))
 
-    val leafOpsMock = mock[LeafOps]
+  val builder = new LeafBuilderImpl with ActionBuilderImpl {}
 
-    override implicit def leafOps(leaf: Leaf[_, _]): LeafOps = leafOpsMock
+  val requestId = RequestId("RequestId")
 
-    when(leafOpsMock.execute(FunctionInfo(successAction), Seq.empty)).thenReturn(Future.successful(PageletResult("action")))
-    when(leafOpsMock.execute(FunctionInfo(failedAction), Seq.empty)).thenReturn(Future.failed(TestException("sync fail")))
-    when(leafOpsMock.execute(FunctionInfo(failedAsyncAction), Seq.empty)).thenReturn(Future.failed(TestException("async fail")))
+  def build[T](info: FunctionInfo[T], isMandatory: Boolean): PageletResult =
+    builder.leafBuilderService.build(Leaf('one, info, isMandatory = isMandatory), Seq.empty, requestId)
 
+  def buildWithFallback[T, U](info: FunctionInfo[T], fallback: FunctionInfo[U], isMandatory: Boolean): PageletResult =
+    builder.leafBuilderService.build(Leaf('one, info, isMandatory = isMandatory).withFallback(fallback), Seq.empty, requestId)
+
+  /**
+    * Without fallback
+    */
+
+  "LeafBuilder#build (mandatory without fallback)" should "yield the body of the result" in {
+    val result = build(FunctionInfo(successAction _), isMandatory = true)
+    result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
+    result.body.consume should equal("action")
   }
 
-  val requestId = RequestId("123")
-
-  def build[T](info: FunctionInfo[T], isRoot: Boolean): Future[PageletResult] =
-    builder.leafBuilderService.build(
-      Leaf('one, info),
-      Seq.empty, requestId, isRoot)
-
-  def buildWithFallback[T, U](info: FunctionInfo[T], fallback: FunctionInfo[U], isRoot: Boolean): Future[PageletResult] =
-    builder.leafBuilderService.build(
-      Leaf('one, info).withFallback(fallback),
-      Seq.empty, requestId, isRoot)
-
-  "LeafBuilder#build (as root without fallback)" should "yield a PageletResult" in {
-    build(FunctionInfo(successAction), isRoot = true).futureValue should equal(PageletResult("action"))
+  it should "yield an empty body if an Action fails" in {
+    val result = build(FunctionInfo(failedAction _), isMandatory = true)
+    result.mandatoryFailedPagelets.map(_.futureValue).head should be(true)
+    result.body.consume should equal("")
   }
 
-  it should "yield a NoFallbackException if an Exception is thrown" in {
-    build(FunctionInfo(failedAction), isRoot = true).failed.futureValue should equal(NoFallbackException('one))
-  }
-
-  it should "yield a NoFallbackException if an Exception is thrown within the Future" in {
-    build(FunctionInfo(failedAsyncAction), isRoot = true).failed.futureValue should equal(NoFallbackException('one))
-  }
+    it should "yield an empty body if an async Action fails" in {
+      val result = build(FunctionInfo(failedAsyncAction _), isMandatory = true)
+      result.mandatoryFailedPagelets.map(_.futureValue).head should be(true)
+      result.body.consume should equal("")
+    }
 
 
+    "LeafBuilder#build (not mandatory without fallback)" should "yield the body of the result" in {
+      val result = build(FunctionInfo(successAction _), isMandatory = false)
+      result.body.consume should equal("action")
+    }
 
-  "LeafBuilder#build (not as root without fallback)" should "yield a PageletResult" in {
-    build(FunctionInfo(successAction), isRoot = false).futureValue should equal(PageletResult("action"))
-  }
+    it should "yield an empty body if an Action fails" in {
+      val result = build(FunctionInfo(failedAction _), isMandatory = false)
+      result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
+      result.body.consume should equal("")
+    }
 
-  it should "yield an empty PageletResult if an Exception is thrown" in {
-    build(FunctionInfo(failedAction), isRoot = false).futureValue should equal(PageletResult.empty)
-  }
+    it should "yield an empty body if an async Action fails" in {
+      val result = build(FunctionInfo(failedAsyncAction _), isMandatory = false)
+      result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
+      result.body.consume should equal("")
+    }
 
-  it should "yield an empty PageletResult if an Exception is thrown within the Future" in {
-    build(FunctionInfo(failedAsyncAction), isRoot = false).futureValue should equal(PageletResult.empty)
-  }
+    /**
+      * With fallback
+      */
 
+    // Not root node: Successful fallback
 
+    "LeafBuilder#build (mandatory with successful fallback)" should "yield the body of the result" in {
+      val result = buildWithFallback(FunctionInfo(successAction _), FunctionInfo(failedAction _), isMandatory = true)
+      result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
+      result.body.consume should equal("action")
+    }
 
-  "LeafBuilder#build (as root with successful fallback)" should "yield a PageletResult" in {
-    val result = buildWithFallback(FunctionInfo(successAction), FunctionInfo(successAction), isRoot = true)
-    result.futureValue should equal(PageletResult("action"))
-  }
+    it should "yield the fallback if an Action fails" in {
+      val result = buildWithFallback(FunctionInfo(failedAction _), FunctionInfo(successAction _), isMandatory = true)
+      result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
+      result.body.consume should equal("action")
+    }
 
-  it should "yield a PageletResult if an Exception is thrown in the main Action" in {
-    val result = buildWithFallback(FunctionInfo(failedAction), FunctionInfo(successAction), isRoot = true)
-    result.futureValue should equal(PageletResult("action"))
-  }
+    it should "yield the fallback if an async Action fails" in {
+      val result = buildWithFallback(FunctionInfo(failedAsyncAction _), FunctionInfo(successAction _), isMandatory = true)
+      result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
+      result.body.consume should equal("action")
+    }
 
-  it should "yield a PageletResult if an Exception is thrown in the main Action Future" in {
-    val result = buildWithFallback(FunctionInfo(failedAsyncAction), FunctionInfo(successAction), isRoot = true)
-    result.futureValue should equal(PageletResult("action"))
-  }
+    // mandatory node: Successful fallback
 
+    "LeafBuilder#build (not mandatory with successful fallback)" should "yield the body of the result" in {
+      val result = buildWithFallback(FunctionInfo(successAction _), FunctionInfo(failedAction _), isMandatory = false)
+      result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
+      result.body.consume should equal("action")
+    }
 
+    it should "yield the the fallback, if an Action fails" in {
+      val result = buildWithFallback(FunctionInfo(failedAction _), FunctionInfo(successAction _), isMandatory = false)
+      result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
+      result.body.consume should equal("action")
+    }
 
-  "LeafBuilder#build (not as root with successful fallback)" should "yield a PageletResult" in {
-    val result = buildWithFallback(FunctionInfo(successAction), FunctionInfo(successAction), isRoot = false)
-    result.futureValue should equal(PageletResult("action"))
-  }
+    it should "yield yield the fallback, if an async Action fails" in {
+      val result = buildWithFallback(FunctionInfo(failedAsyncAction _), FunctionInfo(successAction _), isMandatory = false)
+      result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
+      result.body.consume should equal("action")
+    }
 
-  it should "yield a PageletResult if an Exception is thrown in the main Action" in {
-    val result = buildWithFallback(FunctionInfo(failedAction), FunctionInfo(successAction), isRoot = false)
-    result.futureValue should equal(PageletResult("action"))
-  }
+    // Sync: default and fallback fail
 
-  it should "yield a PageletResult if an Exception is thrown in the main Action Future" in {
-    val result = buildWithFallback(FunctionInfo(failedAsyncAction), FunctionInfo(successAction), isRoot = false)
-    result.futureValue should equal(PageletResult("action"))
-  }
+    "LeafBuilder#build (mandatory with failing fallback)" should "yield an empty body if the default and fallback Actions fail" in {
+      val result = buildWithFallback(FunctionInfo(failedAction _), FunctionInfo(failedAction _), isMandatory = true)
+      result.mandatoryFailedPagelets.map(_.futureValue).head should be(true)
+      result.body.consume should equal("")
+    }
 
+    "LeafBuilder#build (not mandatory with failing fallback)" should "yield an empty body if the default and fallback Actions fail" in {
+      val result = buildWithFallback(FunctionInfo(failedAction _), FunctionInfo(failedAction), isMandatory = false)
+      result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
+      result.body.consume should equal("")
+    }
 
+    // Async: default and fallback fail
 
-  "LeafBuilder#build (as root with failing fallback)" should "yield a PageletResult if an Exception is thrown in the main Action" in {
-    val result = buildWithFallback(FunctionInfo(failedAction), FunctionInfo(failedAction), isRoot = true)
-    result.failed.futureValue shouldBe an[TestException]
-  }
+    "LeafBuilder#build (mandatory with failing fallback)" should "yield an empty body if the default and fallback async Actions fail" in {
+      val result = buildWithFallback(FunctionInfo(failedAsyncAction _), FunctionInfo(failedAsyncAction _), isMandatory = true)
+      result.mandatoryFailedPagelets.map(_.futureValue).head should be(true)
+      result.body.consume should equal("")
+    }
 
-  "LeafBuilder#build (not as root with failing fallback)" should "yield a PageletResult if an Exception is thrown in the main Action" in {
-    val result = buildWithFallback(FunctionInfo(failedAction), FunctionInfo(failedAction), isRoot = false)
-    result.futureValue should equal(PageletResult.empty)
-  }
-
-
-
-  "LeafBuilder#build (as root with failing fallback)" should "yield a PageletResult if an Exception is thrown in the main Action Future" in {
-    val result = buildWithFallback(FunctionInfo(failedAsyncAction), FunctionInfo(failedAsyncAction), isRoot = true)
-    result.failed.futureValue shouldBe an[TestException]
-  }
-
-  "LeafBuilder#build (not as root with failing fallback)" should "yield a PageletResult if an Exception is thrown in the main Action Future" in {
-    val result = buildWithFallback(FunctionInfo(failedAsyncAction), FunctionInfo(failedAsyncAction), isRoot = false)
-    result.futureValue should equal(PageletResult.empty)
-  }
-
+    "LeafBuilder#build (not mandatory with failing fallback)" should "yield an empty body if the default and fallback async Actions fail" in {
+      val result = buildWithFallback(FunctionInfo(failedAsyncAction _), FunctionInfo(failedAsyncAction _), isMandatory = false)
+      result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
+      result.body.consume should equal("")
+    }
 
 }

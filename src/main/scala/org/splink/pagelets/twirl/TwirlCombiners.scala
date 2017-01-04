@@ -1,27 +1,61 @@
-package org.splink.pagelets
+package org.splink.pagelets.twirl
 
-import scala.language.implicitConversions
+import akka.stream.Materializer
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
+import org.splink.pagelets._
 import play.api.Logger
 import play.api.mvc.Cookie
-import play.twirl.api.Html
+import play.twirl.api.{Html, HtmlFormat}
 
+import scala.concurrent.{ExecutionContext, Future}
+import scala.language.implicitConversions
 import scala.util.Try
 
-object TwirlConversions {
+object TwirlCombiners {
   private val log = Logger("TwirlConversions")
 
-  def combine(results: Seq[PageletResult])(template: Seq[Html] => Html) = {
-    val htmls = results.map(r => Html(r.body))
-    val htmlString = template(htmls).body
-    combineAssets(results)(htmlString)
+  def combine(results: Seq[PageletResult])(template: Seq[Html] => Html)(
+    implicit ec: ExecutionContext, m: Materializer): PageletResult = {
+
+    val htmls = Future.traverse(results) { r =>
+      r.body.runFold(HtmlFormat.empty)((acc, next) => Html(acc + next.utf8String))
+    }
+
+    val source = Source.fromFuture(htmls.map(xs => ByteString(template(xs).body)))
+
+    combineAssets(results)(source)
   }
 
-  private def combineAssets(results: Seq[PageletResult]): (String) => PageletResult = {
-    val (js, jsTop, css, cookies, metaTags) = results.foldLeft(
-      Set.empty[Javascript], Set.empty[Javascript], Set.empty[Css], Seq.empty[Cookie], Set.empty[MetaTag]) { (acc, next) =>
-      (acc._1 ++ next.js, acc._2 ++ next.jsTop, acc._3 ++ next.css, acc._4 ++ next.cookies, acc._5 ++ next.metaTags)
+  def combineStream(results: Seq[PageletResult])(template: Seq[HtmlStream] => HtmlStream)(
+    implicit ec: ExecutionContext, m: Materializer): PageletResult = {
+
+    def toHtmlStream(results: Seq[PageletResult]) =
+      results.map(r => HtmlStream(r.body.map(b => Html(b.utf8String))))
+
+    val stream = template(toHtmlStream(results))
+    val source = stream.source.map(s => ByteString(s.body))
+
+    combineAssets(results)(source)
+  }
+
+  private def combineAssets(results: Seq[PageletResult]): Source[ByteString, _] => PageletResult = {
+    val (js, jsTop, css, cookies, metaTags, failedPagelets) = results.foldLeft(
+      Seq.empty[Javascript],
+      Seq.empty[Javascript],
+      Seq.empty[Css],
+      Seq.empty[Future[Seq[Cookie]]],
+      Seq.empty[MetaTag],
+      Seq.empty[Future[Boolean]]) { (acc, next) =>
+      (acc._1 ++ next.js,
+        acc._2 ++ next.jsTop,
+        acc._3 ++ next.css,
+        acc._4 ++ next.cookies,
+        (acc._5 ++ next.metaTags).distinct,
+        acc._6 ++ next.mandatoryFailedPagelets)
     }
-    PageletResult(_, js, jsTop, css, cookies, metaTags)
+
+    PageletResult(_, js, jsTop, css, cookies, metaTags, failedPagelets)
   }
 
   implicit def adapt[A, B](f: A => B): Seq[A] => B =

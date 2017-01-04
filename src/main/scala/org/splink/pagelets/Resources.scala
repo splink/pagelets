@@ -10,19 +10,15 @@ trait Resources {
 
   trait ResourceProvider {
     def contains(fingerprint: Fingerprint): Boolean
-
     def contentFor(fingerprint: Fingerprint): Option[ResourceContent]
-
-    def update[T <: Resource](resources: Set[T])(implicit e: Environment): Option[Fingerprint]
+    def update[T <: Resource](resources: Seq[T])(implicit e: Environment): Option[Fingerprint]
   }
 
 }
 
 trait ResourcesImpl extends Resources {
 
-  override val resources = new ResourceProviderImpl
-
-  class ResourceProviderImpl extends ResourceProvider {
+  override val resources = new ResourceProvider {
     var cache = Map[Fingerprint, ResourceContent]()
     var itemCache = Map[Fingerprint, ResourceContent]()
     val log = Logger("Resources")
@@ -38,7 +34,7 @@ trait ResourcesImpl extends Resources {
       itemCache = cache.empty
     }
 
-    override def update[T <: Resource](resources: Set[T])(implicit e: Environment) = synchronized {
+    override def update[T <: Resource](resources: Seq[T])(implicit e: Environment) = synchronized {
       if (resources.nonEmpty) {
         val content = assemble(resources)
         val hash = Fingerprint(DigestUtils.md5Hex(content.body))
@@ -47,8 +43,8 @@ trait ResourcesImpl extends Resources {
       } else None
     }
 
-    def assemble[T <: Resource](resources: Set[T])(implicit e: Environment) = {
-      resources.foldLeft(ResourceContent.empty) { (acc, next) =>
+    def assemble[T <: Resource](resources: Seq[T])(implicit e: Environment) = {
+      resources.distinct.foldLeft(ResourceContent.empty) { (acc, next) =>
         maybeCachedContent(next).map { content =>
           acc + content
         }.getOrElse {
@@ -76,10 +72,9 @@ trait ResourcesImpl extends Resources {
   }
 
   private def mimeTypeFor(resource: Resource) = resource match {
-    case a: Javascript => JsMimeType
-    case a: Css => CssMimeType
+    case _: Javascript => JsMimeType
+    case _: Css => CssMimeType
   }
-
 
 }
 

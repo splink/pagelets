@@ -1,8 +1,8 @@
 package org.splink.pagelets
 
-import akka.stream.Materializer
-import org.splink.pagelets.Exceptions.NoFallbackException
-import play.api.mvc.{AnyContent, Request}
+import akka.stream.scaladsl.Source
+import play.api.http.{HeaderNames, Status}
+import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -12,59 +12,90 @@ trait LeafBuilder {
   def leafBuilderService: LeafBuilderService
 
   trait LeafBuilderService {
-    def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId, isRoot: Boolean)(
-      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult]
+    def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId)(
+      implicit ec: ExecutionContext, r: Request[AnyContent]): PageletResult
   }
+
 }
 
 trait LeafBuilderImpl extends LeafBuilder {
-  self: LeafTools =>
+  self: ActionBuilder =>
   override val leafBuilderService = new LeafBuilderService {
     val log = play.api.Logger("LeafBuilder").logger
 
-    override def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId, isRoot: Boolean)(
-      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
+    override def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId)(
+      implicit ec: ExecutionContext, r: Request[AnyContent]) = {
+      log.info(s"$requestId Invoke pagelet ${leaf.id}")
 
-      def execute(id: Symbol, isFallback: Boolean,
-                  fnc: Seq[Arg] => Future[PageletResult],
-                  fallbackFnc: (Seq[Arg], Throwable) => Future[PageletResult]) = {
+      def stacktraceFor(t: Throwable) = t.getStackTrace.map("    " + _).mkString("\n")
 
-        def messageFor(t: Throwable) = if (Option(t.getMessage).isDefined) t.getMessage else "No message"
+      def messageFor(t: Throwable) = if (Option(t.getMessage).isDefined) {
+        t.getMessage + "\n" + stacktraceFor(t)
+      } else "No message\n" + stacktraceFor(t)
 
-        val startTime = System.currentTimeMillis()
-        val s = if (isFallback) " fallback" else ""
-        log.info(s"$requestId Invoke$s pagelet $id")
+      def mandatory = if(leaf.isMandatory) "mandatory" else ""
 
-        Try {
-          fnc(args).map { result =>
-            log.info(s"$requestId Finish$s pagelet $id took ${System.currentTimeMillis() - startTime}ms")
-            result
-          }.recoverWith {
-            case t: Throwable =>
-              log.warn(s"$requestId Exception in async$s pagelet $id '${messageFor(t)}'")
-              fallbackFnc(args, t)
+      val startTime = System.currentTimeMillis()
+
+      actionService.execute(leaf.id, leaf.info, args).fold(t => {
+        log.warn(s"$requestId TypeException in $mandatory pagelet ${leaf.id} '${messageFor(t)}'")
+        PageletResult.empty.copy(mandatoryFailedPagelets = Seq(Future.successful(leaf.isMandatory)))
+      }, action => {
+
+        def lastFallback =
+          if (leaf.isMandatory) Action(Results.InternalServerError) else Action(Results.Ok)
+
+        def fallbackFnc =
+          leaf.fallback.getOrElse(FunctionInfo(lastFallback _, Nil))
+
+        def fallbackAction = actionService.execute(leaf.id, fallbackFnc, args).fold(t => {
+          log.warn(s"$requestId TypeException in $mandatory pagelet fallback ${leaf.id} '${messageFor(t)}'")
+          // fallback failed
+          lastFallback
+        }, action =>
+          action
+        )
+
+        val eventualResult = Try {
+          action(r).recoverWith { case t =>
+            log.warn(s"$requestId Exception in async pagelet ${leaf.id} '${messageFor(t)}'")
+            fallbackAction(r).recoverWith { case _ =>
+              log.warn(s"$requestId Exception in $mandatory async pagelet fallback ${leaf.id} '${messageFor(t)}'")
+              lastFallback(r)
+            }
           }
         } match {
           case Failure(t) =>
-            log.warn(s"$requestId Exception in $s pagelet $id '${messageFor(t)}'")
-            fallbackFnc(args, t)
+            log.warn(s"$requestId Exception in pagelet ${leaf.id} '${messageFor(t)}'")
+            Try(fallbackAction(r)) match {
+              case Success(result) => result
+              case Failure(_) =>
+                log.warn(s"$requestId Exception in $mandatory pagelet fallback ${leaf.id} '${messageFor(t)}'")
+                lastFallback(r)
+            }
           case Success(result) => result
         }
-      }
 
+        val bodySource = Source.fromFuture(eventualResult.map { result =>
+          log.info(s"$requestId Finish pagelet ${leaf.id} took ${System.currentTimeMillis() - startTime}ms")
+          result.body.dataStream
+        }).flatMapConcat(identity)
 
-      val build = leaf.execute(leaf.info, _: Seq[Arg])
+        val cookies = eventualResult.map { result =>
+          result.header.headers.get(HeaderNames.SET_COOKIE).
+            map(Cookies.decodeSetCookieHeader).getOrElse(Seq.empty)
+        }
 
-      val buildFallback = (a: Seq[Arg]) => leaf.fallback.map(f => leaf.execute(f, a)).getOrElse {
-        Future.failed(NoFallbackException(leaf.id))
-      }
+        val hasMandatoryPageletFailed = Seq(eventualResult.map(_.header.status == Status.INTERNAL_SERVER_ERROR))
 
-      execute(leaf.id, isFallback = false, build,
-        fallbackFnc = (args, t) =>
-          execute(leaf.id, isFallback = true, buildFallback,
-            fallbackFnc = (args, t) =>
-              if (isRoot) Future.failed(t) else Future.successful(PageletResult.empty)
-          ))
+        PageletResult(bodySource,
+          leaf.javascript,
+          leaf.javascriptTop,
+          leaf.css, Seq(cookies),
+          leaf.metaTags,
+          hasMandatoryPageletFailed
+        )
+      })
     }
   }
 }

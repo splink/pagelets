@@ -1,46 +1,65 @@
 package org.splink.pagelets
 
-import akka.stream.Materializer
 import play.api.mvc.{AnyContent, Request}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 trait PageBuilder {
   def builder: PageBuilderService
 
   trait PageBuilderService {
-    def build(pagelet: Pagelet, args: Arg*)(
-      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer): Future[PageletResult]
+    def build(pagelet: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent]): PageletResult
   }
+
 }
 
 trait PageBuilderImpl extends PageBuilder {
   self: LeafBuilder =>
 
   override val builder = new PageBuilderService {
+    import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+    import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
+
     val log = play.api.Logger("PageBuilder")
 
-    override def build(p: Pagelet, args: Arg*)(
-      implicit ec: ExecutionContext, r: Request[AnyContent], m: Materializer) = {
+    override def build(pagelet: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent]) = {
+      val start = System.currentTimeMillis()
       val requestId = RequestId.create
 
-      def rec(p: Pagelet): Future[PageletResult] =
-        p match {
-          case t@Tree(id, children, _) =>
-            val start = System.currentTimeMillis()
-            log.info(s"$requestId Invoke pagelet ${p.id}")
+      def rec(p: Pagelet): PageletResult = p match {
+        case Tree(_, children, combiner) =>
+          combiner(children.map(rec))
+        case l: Leaf[_, _] =>
+          leafBuilderService.build(l, args, requestId)
+      }
 
-            Future.sequence(children.map(rec)).map(t.combine).map { result =>
-              log.info(s"$requestId Finish pagelet ${p.id} took ${System.currentTimeMillis() - start}ms")
-              result
+      val result = rec(pagelet)
+      result.copy(body = result.body.via(new Completion(start, requestId, pagelet)))
+    }
+
+
+    private class Completion[A](start: Long, requestId: RequestId, pagelet: Pagelet) extends GraphStage[FlowShape[A, A]] {
+      val in = Inlet[A]("Completion.in")
+      val out = Outlet[A]("Completion.out")
+
+      val shape = FlowShape.of(in, out)
+
+      override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
+        new GraphStageLogic(shape) {
+          setHandler(in, new InHandler {
+            override def onPush(): Unit = push(out, grab(in))
+
+            override def onUpstreamFinish(): Unit = {
+              log.info(s"$requestId Finish page ${pagelet.id} took ${System.currentTimeMillis() - start}ms")
+              complete(out)
             }
 
-          case l: Leaf[_, _] =>
-            leafBuilderService.build(l, args, requestId, isRoot = p.id == l.id)
+          })
+          setHandler(out, new OutHandler {
+            override def onPull(): Unit = pull(in)
+          })
         }
-
-      rec(p)
     }
-  }
 
+  }
 }
