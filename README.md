@@ -8,8 +8,10 @@ Check out the [sample project](https://github.com/splink/pagelets-seed) to see a
 ### Idea
 The idea behind the Pagelets Module is to split a web page into small, composable units. Such a unit is called a pagelet. 
 In terms of the Play Framework a pagelet is just a simple Action[AnyContent]. That means that a pagelet is basically a (small) 
-web page. Thus, any pagelet can also be served individually. A pagelet usually consists of a view, resources (JavaScript, Css), 
-a controller action and a service to fetch data.  
+web page. Pagelets can be arranged in a page tree. So, if a user requests a page, the page is constructed according to it's  page tree. It is also possible to serve any part of the tree down to a single pagelet individually. 
+The ordinary pagelet consists of a view, resources (JavaScript, Css), a controller action and a service to fetch data.  
+
+![Pagelets](docs//pagelets-tree-vis.png)
 
 Pagelets are particularly useful if you want to serve tailor-made pages to your visitors. For instance you can easily 
 serve a slightly different page to users from different countries (i18n), or perform A/B testing, or fine-tune the page 
