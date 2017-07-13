@@ -5,7 +5,7 @@ import org.splink.pagelets.{Fingerprint, Head, PageStream}
 import play.twirl.api.{Appendable, Format, Html, HtmlFormat}
 
 
-case class HtmlPageStream(language: String, head: Head, body: HtmlStream, js: Option[Fingerprint] = None)
+case class HtmlPageStream(head: Head, body: HtmlStream, js: Option[Fingerprint] = None)
 
 class HtmlStream(val source: Source[Html, _]) extends Appendable[HtmlStream]
 
@@ -36,6 +36,6 @@ object HtmlStreamOps {
 
 
   implicit def pageStream2HtmlPageStream(page: PageStream): HtmlPageStream =
-    HtmlPageStream(page.language, page.head, HtmlStream(page.body.map(b => Html(b.utf8String))), page.js)
+    HtmlPageStream(page.head, HtmlStream(page.body.map(b => Html(b.utf8String))), page.js)
 }
 

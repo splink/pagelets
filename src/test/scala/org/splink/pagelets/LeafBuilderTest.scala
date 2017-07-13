@@ -6,17 +6,19 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import helpers.FutureHelper
 import org.scalatest.{FlatSpec, Matchers}
-import play.api.mvc.{Action, Results}
-import play.api.test.FakeRequest
+import play.api.mvc._
+import play.api.test.{FakeRequest, StubControllerComponentsFactory}
 
 import scala.concurrent.Future
 import scala.language.implicitConversions
 
-class LeafBuilderTest extends FlatSpec with Matchers with FutureHelper {
+class LeafBuilderTest extends FlatSpec with Matchers with FutureHelper with StubControllerComponentsFactory {
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
   implicit val ec = system.dispatcher
   implicit val request = FakeRequest()
+
+  val Action = stubControllerComponents().actionBuilder
 
   val successAction = Action(Results.Ok("action"))
 
@@ -34,7 +36,9 @@ class LeafBuilderTest extends FlatSpec with Matchers with FutureHelper {
     body = Source.fromFuture(Future.successful(ByteString(body))),
     cookies = Seq(Future(Seq.empty)))
 
-  val builder = new LeafBuilderImpl with ActionBuilderImpl {}
+  val builder = new LeafBuilderImpl with BaseController with ActionBuilderImpl {
+    override def controllerComponents: ControllerComponents = stubControllerComponents()
+  }
 
   val requestId = RequestId("RequestId")
 

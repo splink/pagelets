@@ -18,7 +18,9 @@ trait Resources {
 
 trait ResourcesImpl extends Resources {
 
-  override val resources = new ResourceProvider {
+  override val resources = new ResourceProviderImpl
+
+  class ResourceProviderImpl extends ResourceProvider {
     var cache = Map[Fingerprint, ResourceContent]()
     var itemCache = Map[Fingerprint, ResourceContent]()
     val log = Logger("Resources")

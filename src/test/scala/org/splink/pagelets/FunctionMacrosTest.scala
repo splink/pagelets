@@ -1,9 +1,12 @@
 package org.splink.pagelets
 import org.scalatest._
 import org.splink.pagelets.FunctionMacros._
-import play.api.mvc.{Results, Action}
+import play.api.mvc.{Action, Results}
+import play.api.test.StubControllerComponentsFactory
 
-class FunctionMacrosTest extends FlatSpec with Matchers {
+class FunctionMacrosTest extends FlatSpec with Matchers with StubControllerComponentsFactory {
+
+  val Action = stubControllerComponents().actionBuilder
 
   object TestFunctions {
     case class Complex(s: String)

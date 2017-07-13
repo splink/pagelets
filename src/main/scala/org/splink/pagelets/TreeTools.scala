@@ -1,6 +1,6 @@
 package org.splink.pagelets
 
-import play.api.mvc.{Action, Results}
+import play.api.mvc.{BaseController, Results}
 
 import scala.language.implicitConversions
 
@@ -14,7 +14,7 @@ trait TreeTools {
   }
 }
 
-trait TreeToolsImpl extends TreeTools {
+trait TreeToolsImpl extends TreeTools { self: BaseController =>
   override implicit def treeOps(tree: Tree): TreeOps = new TreeOpsImpl(tree)
 
   class TreeOpsImpl(tree: Tree) extends TreeOps {

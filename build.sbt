@@ -1,18 +1,18 @@
 name := """pagelets"""
-version := "0.0.3"
+version := "0.0.4-SNAPSHOT"
 
 lazy val root = (project in file(".")).
   settings(Seq(
     organization := "org.splink",
-    scalaVersion := "2.11.8",
+    scalaVersion := "2.12.2",
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % Test,
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % Test,
+      "org.scalatestplus.play" %% "scalatestplus-play" % "3.0.0" % Test,
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.6.0" % Test,
       "org.mockito" % "mockito-core" % "1.10.19" % Test,
       "ch.qos.logback" % "logback-classic" % "1.1.7" % Test,
-      "com.typesafe.play" %% "play" % "2.5.13",
-      "com.typesafe.akka" %% "akka-stream" % "2.4.14"),
+      "com.typesafe.play" %% "play" % "2.6.2",
+      "com.typesafe.akka" %% "akka-stream" % "2.5.3"),
     scalacOptions ++= Seq(
       "-unchecked",
       "-deprecation",
@@ -22,8 +22,10 @@ lazy val root = (project in file(".")).
       "-language:existentials")
   ) ++ publishSettings)
 
-
 import ReleaseTransformations._
+
+crossScalaVersions := Seq("2.11.11", "2.12.2")
+releaseCrossBuild := true
 
 lazy val publishSettings = Seq(
   publishMavenStyle := true,
