@@ -9,18 +9,15 @@ import play.api.{Environment, Logger}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-case class Head(title: String,
-                metaTags: Seq[MetaTag] = Seq.empty,
+case class Head(metaTags: Seq[MetaTag] = Seq.empty,
                 js: Option[Fingerprint] = None,
                 css: Option[Fingerprint] = None)
 
-case class PageStream(language: String,
-                      head: Head,
+case class PageStream(head: Head,
                       body: Source[ByteString, _],
                       js: Option[Fingerprint] = None)
 
-case class Page(language: String,
-                head: Head,
+case class Page(head: Head,
                 body: String,
                 js: Option[Fingerprint] = None)
 
@@ -30,36 +27,32 @@ trait PageletActions {
   def PageletAction: PageletActions
 
   trait PageActions {
-    def async[T: Writeable](onError: => Call)(
-      title: String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], Page) => T)(
+    def async[T: Writeable](onError: => Call)(title: RequestHeader => String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], Page) => T)(
                              implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
 
-    def stream[T: Writeable](title: String, tree: RequestHeader => Pagelet, args: Arg*)(
-      template: (Request[_], PageStream) => Source[T, _])(
+    def stream[T: Writeable](title: RequestHeader => String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], PageStream) => Source[T, _])(
       implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
   }
 
   trait PageletActions {
-    def async[T: Writeable](onError: => Call)(
-      plan: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
+    def async[T: Writeable](onError: => Call)(tree: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
                              implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
   }
 
 }
 
 trait PageletActionsImpl extends PageletActions {
-  self: Controller with PageBuilder with TreeTools with Resources =>
+  self: BaseController with PageBuilder with TreeTools with Resources =>
   val log = Logger("PageletActions")
 
   override val PageAction = new PageActions {
 
-    override def async[T: Writeable](onError: => Call)(
-      title: String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], Page) => T)(
+    override def async[T: Writeable](onError: => Call)(title: RequestHeader => String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], Page) => T)(
                                       implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
       val result = builder.build(tree(request), args: _*)
 
       (for {
-        page <- mkPage(title, result)
+        page <- mkPage(result)
         cookies <- Future.sequence(result.cookies)
         mandatoryPageletFailed <- Future.sequence(result.mandatoryFailedPagelets)
       } yield {
@@ -75,25 +68,22 @@ trait PageletActionsImpl extends PageletActions {
       }
     }
 
-    override def stream[T: Writeable](title: String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], PageStream) => Source[T, _])(
+    override def stream[T: Writeable](title: RequestHeader => String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], PageStream) => Source[T, _])(
       implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action { implicit request =>
 
       val result = builder.build(tree(request), args: _*)
-      val page = mkPageStream(title, result)
+      val page = mkPageStream(result)
 
       Ok.chunked(template(request, page))
     }
 
-    def mkPage(title: String, result: PageletResult)(implicit ec: ExecutionContext, r: RequestHeader, env: Environment, m: Materializer) = {
+    def mkPage(result: PageletResult)(implicit ec: ExecutionContext, r: RequestHeader, env: Environment, m: Materializer) = {
       val (jsFinger, jsTopFinger, cssFinger) = updateResources(result)
 
       val eventualBody = result.body.runFold("")(_ + _.utf8String)
 
       eventualBody.map { body =>
-        Page(request2lang.language,
-          Head(title, result.metaTags, jsTopFinger, cssFinger),
-          body,
-          jsFinger)
+        Page(Head(result.metaTags, jsTopFinger, cssFinger), body, jsFinger)
       }
     }
 
@@ -123,11 +113,10 @@ trait PageletActionsImpl extends PageletActions {
       Source.combine(result.body, Source.fromFuture(cookies))(Concat.apply).filter(_.nonEmpty)
     }
 
-    def mkPageStream(title: String, result: PageletResult)(implicit ec: ExecutionContext, r: RequestHeader, env: Environment, m: Materializer) = {
+    def mkPageStream(result: PageletResult)(implicit ec: ExecutionContext, r: RequestHeader, env: Environment, m: Materializer) = {
       val (jsFinger, jsTopFinger, cssFinger) = updateResources(result)
 
-      PageStream(request2lang.language,
-        Head(title, result.metaTags, jsTopFinger, cssFinger),
+      PageStream(Head(result.metaTags, jsTopFinger, cssFinger),
         bodySourceWithCookies(result),
         jsFinger)
     }
@@ -135,14 +124,14 @@ trait PageletActionsImpl extends PageletActions {
 
   override val PageletAction = new PageletActions {
     override def async[T: Writeable](onError: => Call)(
-      plan: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
+      tree: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
                                       implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { request =>
-      plan(request).find(id).map { p =>
+      tree(request).find(id).map { p =>
         val args = request.queryString.map { case (key, values) =>
           Arg(key, values.head)
         }.toSeq
 
-        PageAction.async(onError)(id.name, _ => p, args: _*)(template).apply(request)
+        PageAction.async(onError)(_ => id.name, _ => p, args: _*)(template).apply(request)
       }.getOrElse {
         Future.successful(NotFound(s"$id does not exist"))
       }

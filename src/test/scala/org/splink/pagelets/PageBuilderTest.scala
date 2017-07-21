@@ -6,12 +6,12 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import helpers.FutureHelper
 import org.scalatest.{FlatSpec, Matchers}
-import play.api.mvc.{Action, AnyContent, Request, Results}
-import play.api.test.FakeRequest
+import play.api.mvc._
+import play.api.test.{FakeRequest, StubControllerComponentsFactory}
 
 import scala.concurrent.ExecutionContext
 
-class PageBuilderTest extends FlatSpec with Matchers with FutureHelper {
+class PageBuilderTest extends FlatSpec with Matchers with FutureHelper  with StubControllerComponentsFactory {
 
   import FunctionMacros._
 
@@ -19,6 +19,8 @@ class PageBuilderTest extends FlatSpec with Matchers with FutureHelper {
   implicit val mat = ActorMaterializer()
   implicit val ec = system.dispatcher
   implicit val request = FakeRequest()
+
+  val Action = stubControllerComponents().actionBuilder
 
   def action(s: String) = () => Action(Results.Ok(s))
 
@@ -40,7 +42,9 @@ class PageBuilderTest extends FlatSpec with Matchers with FutureHelper {
     }
   }.builder
 
-  def opsify(t: Tree) = new TreeToolsImpl {}.treeOps(t)
+  def opsify(t: Tree) = new TreeToolsImpl with BaseController {
+      override def controllerComponents: ControllerComponents = stubControllerComponents()
+  }.treeOps(t)
 
   "PageBuilder#builder" should "build a complete tree" in {
     builder.build(tree).body.consume should equal("onethreefour")

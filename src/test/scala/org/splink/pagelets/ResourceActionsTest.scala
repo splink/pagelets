@@ -2,19 +2,21 @@ package org.splink.pagelets
 
 import org.mockito.Matchers._
 import org.mockito.Mockito._
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.scalatestplus.play._
 import play.api.Environment
 import play.api.http.HeaderNames
-import play.api.test.FakeRequest
+import play.api.mvc.{BaseController, ControllerComponents}
+import play.api.test.{FakeRequest, StubControllerComponentsFactory}
 import play.api.test.Helpers._
 
 import scala.language.reflectiveCalls
 
-class ResourceActionsTest extends PlaySpec with MockitoSugar {
+class ResourceActionsTest extends PlaySpec with MockitoSugar with StubControllerComponentsFactory {
   implicit val env = Environment.simple()
 
-  def actions = new ResourceActionsImpl with Resources {
+  def actions = new ResourceActionsImpl with Resources with BaseController {
+    override def controllerComponents: ControllerComponents = stubControllerComponents()
     override val resources: ResourceProvider = mock[ResourceProvider]
   }
 
@@ -54,7 +56,7 @@ class ResourceActionsTest extends PlaySpec with MockitoSugar {
 
       val result = a.ResourceAction(print.toString)(request)
 
-      header(HeaderNames.ETAG, result) must equal(Some(print.toString))
+      header(HeaderNames.ETAG, result) must equal(Some(s""""$print"""".toString))
     }
 
     "return NotModified if the server holds a resource for the fingerprint in the etag (IF_NONE_MATCH) header" in {

@@ -3,7 +3,7 @@ package org.splink.pagelets
 import play.api.mvc._
 
 trait Pagelets
-  extends Controller
+  extends BaseController
     with PageletActions
     with PageBuilder
     with ResourceActions

@@ -2,6 +2,7 @@ package org.splink.pagelets
 
 import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
 import play.api.{Environment, Mode}
+
 import scala.language.reflectiveCalls
 
 class ResourcesTest extends FlatSpec with Matchers with BeforeAndAfter {

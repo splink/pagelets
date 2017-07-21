@@ -1,12 +1,11 @@
 package org.splink.pagelets
 
 import akka.stream.scaladsl.Source
-import play.api.http.{HeaderNames, Status}
+import play.api.http.HeaderNames
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
-
 
 trait LeafBuilder {
   def leafBuilderService: LeafBuilderService
@@ -19,7 +18,7 @@ trait LeafBuilder {
 }
 
 trait LeafBuilderImpl extends LeafBuilder {
-  self: ActionBuilder =>
+  self: ActionBuilder with BaseController =>
   override val leafBuilderService = new LeafBuilderService {
     val log = play.api.Logger("LeafBuilder").logger
 
@@ -86,7 +85,7 @@ trait LeafBuilderImpl extends LeafBuilder {
             map(Cookies.decodeSetCookieHeader).getOrElse(Seq.empty)
         }
 
-        val hasMandatoryPageletFailed = Seq(eventualResult.map(_.header.status == Status.INTERNAL_SERVER_ERROR))
+        val hasMandatoryPageletFailed = Seq(eventualResult.map(_.header.status == Results.InternalServerError.header.status))
 
         PageletResult(bodySource,
           leaf.javascript,

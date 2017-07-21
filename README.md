@@ -54,13 +54,13 @@ then point your browser to [http://localhost:9000](http://localhost:9000)
 
 ### Quickstart
 To get the idea how Pagelets look in code, read on and check out the [play pagelets seed project](https://github.com/splink/pagelets-seed) afterwards.
-> The Pagelets Module requires Play Framework 2.5.x but will support future Play Versions as well. 
+> The Pagelets Module requires Play Framework 2.5.x (0.0.3) or 2.6.x (0.0.4)  but will support future Play Versions as well. 
 
 
 Add the following lines to your build.sbt file:
 
 ~~~scala
-libraryDependencies += "org.splink" %% "pagelets" % "0.0.3
+libraryDependencies += "org.splink" %% "pagelets" % "0.0.4
 
 routesImport += "org.splink.pagelets.Binders._"
 ~~~
@@ -81,7 +81,7 @@ Create a standard Play controller and inject a *Pagelets* instance. In this exam
 any DI mechanism works.
 ~~~scala
 @Singleton
-class HomeController @Inject()(pagelets: Pagelets)(implicit m: Materializer, ec: ExecutionContext, e: Environment) extends Controller
+class HomeController @Inject()(pagelets: Pagelets)(implicit m: Materializer, e: Environment) extends InjectedController
 ~~~
 
 Bring pagelets into scope
@@ -104,7 +104,7 @@ Name the file *wrapper.scala.html* or, if you want to use streaming, name it *wr
  @(resourceRoute: String => Call)(page: org.splink.pagelets.Page)
  
  <!DOCTYPE html>
- <html lang="@page.language">
+ <html>
      <head>
          <title>@page.head.title</title>
          <link rel="stylesheet" media="screen" href='@routes.Assets.versioned("stylesheets/main.min.css")'>
@@ -161,7 +161,7 @@ def tree(r: RequestHeader) = {
     Leaf('footer, pagelet("footer") _).withCss(Css("footer.min.css"))
   ))
   
-  if(request2lang(r).language == "de") tree.skip('carousel) else tree
+  if(messagesApi.preferred(r).lang.language == "de") tree.skip('carousel) else tree
 }
 ~~~
 There are 2 different kinds of pagelets: Leaf pagelets and Tree pagelets. A Leaf pagelet references an actual Action, while
@@ -188,14 +188,14 @@ its contents. This sole Css file which consists of carousel and footer styles is
 Now add an index Action to the controller to render the complete page.
 If you want to use *async*, add:
 ~~~scala
-def index = PageAction.async(routes.HomeController.errorPage)("Page Title", tree) { (request, page) =>
+def index = PageAction.async(routes.HomeController.errorPage)(_ => "Page Title", tree) { (request, page) =>
   views.html.wrapper(routes.HomeController.resourceFor)(page)
 }
 ~~~
 
 If you prefer to use *streaming*, add:
 ~~~scala
-def index = PageAction.stream("Page Title", tree) { (request, page) =>
+def index = PageAction.stream(_ => "Page Title", tree) { (request, page) =>
   views.html.wrapper(routes.HomeController.resourceFor)(page)
 }
 ~~~

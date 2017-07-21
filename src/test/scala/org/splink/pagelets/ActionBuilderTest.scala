@@ -3,14 +3,14 @@ package org.splink.pagelets
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import helpers.FutureHelper
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{EitherValues, FlatSpec, Matchers}
 import org.splink.pagelets.Exceptions.TypeException
-import play.api.mvc.{Action, Results}
-import play.api.test.FakeRequest
+import play.api.mvc.{Result, Results}
 import play.api.test.Helpers._
+import play.api.test.{FakeRequest, StubControllerComponentsFactory}
 
-class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with EitherValues with MockitoSugar {
+class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with EitherValues with MockitoSugar with StubControllerComponentsFactory {
 
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
@@ -18,6 +18,7 @@ class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with Ei
   implicit val request = FakeRequest()
 
   val tools = new ActionBuilderImpl {}
+  val Action = stubControllerComponents().actionBuilder
 
   "ActionService#execute" should
     "produce an Action if FunctionInfo's types fit the args with primitive args" in {

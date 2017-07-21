@@ -4,16 +4,18 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import helpers.FutureHelper
 import org.scalatest.{FlatSpec, Matchers}
-import play.api.mvc.{Results, Action, AnyContent}
-import play.api.test.FakeRequest
+import play.api.mvc._
+import play.api.test.{FakeRequest, StubControllerComponentsFactory}
 
-class TreeToolsTest extends FlatSpec with Matchers with FutureHelper {
+class TreeToolsTest extends FlatSpec with Matchers with FutureHelper with StubControllerComponentsFactory {
 
   import FunctionMacros._
 
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
   implicit val ec = system.dispatcher
+
+  val Action = stubControllerComponents().actionBuilder
 
   val action = () => Action(Results.Ok("action"))
 
@@ -27,7 +29,9 @@ class TreeToolsTest extends FlatSpec with Matchers with FutureHelper {
     )
   ))
 
-  def opsify(t: Tree) = new TreeToolsImpl {}.treeOps(t)
+  def opsify(t: Tree) = new TreeToolsImpl with BaseController {
+    override def controllerComponents: ControllerComponents = stubControllerComponents()
+  }.treeOps(t)
 
   "TreeTools#find" should "find a Leaf in the tree" in {
     treeOps.find('child31) should equal(
