@@ -1,5 +1,5 @@
 name := """pagelets"""
-version := "0.0.4-SNAPSHOT"
+version := "0.0.4"
 
 lazy val root = (project in file(".")).
   settings(Seq(
