@@ -11,7 +11,7 @@ lazy val root = (project in file(".")).
       "org.scalamock" %% "scalamock-scalatest-support" % "3.6.0" % Test,
       "org.mockito" % "mockito-core" % "1.10.19" % Test,
       "ch.qos.logback" % "logback-classic" % "1.1.7" % Test,
-      "com.typesafe.play" %% "play" % "2.6.2",
+      "com.typesafe.play" %% "play" % "2.6.3",
       "com.typesafe.akka" %% "akka-stream" % "2.5.3"),
     scalacOptions ++= Seq(
       "-unchecked",
