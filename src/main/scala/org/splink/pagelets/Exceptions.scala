@@ -6,7 +6,4 @@ object Exceptions {
 
   case class TypeException(override val msg: String) extends PageletException(msg)
 
-  case class NoFallbackException(id: Symbol) extends PageletException(s"Fallback not defined for $id")
-
-
 }
