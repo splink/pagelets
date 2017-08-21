@@ -4,13 +4,13 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import org.scalatest.concurrent.ScalaFutures
+import helpers.FutureHelper
 import org.scalatest.{FlatSpec, Matchers}
 import play.api.mvc.Cookie
 
 import scala.concurrent.Future
 
-class PageletTest extends FlatSpec with Matchers with ScalaFutures {
+class PageletTest extends FlatSpec with Matchers with FutureHelper {
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
 
