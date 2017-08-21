@@ -9,6 +9,7 @@ import play.api.{Environment, Logger}
 
 import scala.concurrent.{ExecutionContext, Future}
 
+
 case class Head(metaTags: Seq[MetaTag] = Seq.empty,
                 js: Option[Fingerprint] = None,
                 css: Option[Fingerprint] = None)
@@ -28,27 +29,28 @@ trait PageletActions {
 
   trait PageActions {
     def async[T: Writeable](onError: => Call)(title: RequestHeader => String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], Page) => T)(
-                             implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
+                             implicit m: Materializer, env: Environment): Action[AnyContent]
 
     def stream[T: Writeable](title: RequestHeader => String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], PageStream) => Source[T, _])(
-      implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
+      implicit m: Materializer, env: Environment): Action[AnyContent]
   }
 
   trait PageletActions {
     def async[T: Writeable](onError: => Call)(tree: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
-                             implicit ec: ExecutionContext, m: Materializer, env: Environment): Action[AnyContent]
+                             implicit m: Materializer, env: Environment): Action[AnyContent]
   }
 
 }
 
 trait PageletActionsImpl extends PageletActions {
   self: BaseController with PageBuilder with TreeTools with Resources =>
-  val log = Logger("PageletActions")
 
   override val PageAction = new PageActions {
+    val log = Logger("PageletActions")
+    implicit val ec: ExecutionContext = defaultExecutionContext
 
     override def async[T: Writeable](onError: => Call)(title: RequestHeader => String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], Page) => T)(
-                                      implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { implicit request =>
+                                      implicit m: Materializer, env: Environment) = Action.async { implicit request =>
       val result = builder.build(tree(request), args: _*)
 
       (for {
@@ -69,7 +71,7 @@ trait PageletActionsImpl extends PageletActions {
     }
 
     override def stream[T: Writeable](title: RequestHeader => String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], PageStream) => Source[T, _])(
-      implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action { implicit request =>
+      implicit m: Materializer, env: Environment) = Action { implicit request =>
 
       val result = builder.build(tree(request), args: _*)
       val page = mkPageStream(result)
@@ -77,7 +79,7 @@ trait PageletActionsImpl extends PageletActions {
       Ok.chunked(template(request, page))
     }
 
-    def mkPage(result: PageletResult)(implicit ec: ExecutionContext, r: RequestHeader, env: Environment, m: Materializer) = {
+    def mkPage(result: PageletResult)(implicit r: RequestHeader, env: Environment, m: Materializer) = {
       val (jsFinger, jsTopFinger, cssFinger) = updateResources(result)
 
       val eventualBody = result.body.runFold("")(_ + _.utf8String)
@@ -94,7 +96,7 @@ trait PageletActionsImpl extends PageletActions {
       (jsFinger, jsTopFinger, cssFinger)
     }
 
-    def bodySourceWithCookies(result: PageletResult)(implicit ec: ExecutionContext) = {
+    def bodySourceWithCookies(result: PageletResult) = {
       def cookieJs(cookies: Seq[Cookie]) = {
         val calls = cookies.map { c =>
           s"""setCookie('${c.name}', '${c.value}', ${c.maxAge.getOrElse(0)}, '${c.path}', '${c.domain.getOrElse("")}');"""
@@ -113,7 +115,7 @@ trait PageletActionsImpl extends PageletActions {
       Source.combine(result.body, Source.fromFuture(cookies))(Concat.apply).filter(_.nonEmpty)
     }
 
-    def mkPageStream(result: PageletResult)(implicit ec: ExecutionContext, r: RequestHeader, env: Environment, m: Materializer) = {
+    def mkPageStream(result: PageletResult)(implicit r: RequestHeader, env: Environment, m: Materializer) = {
       val (jsFinger, jsTopFinger, cssFinger) = updateResources(result)
 
       PageStream(Head(result.metaTags, jsTopFinger, cssFinger),
@@ -125,7 +127,7 @@ trait PageletActionsImpl extends PageletActions {
   override val PageletAction = new PageletActions {
     override def async[T: Writeable](onError: => Call)(
       tree: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
-                                      implicit ec: ExecutionContext, m: Materializer, env: Environment) = Action.async { request =>
+                                      implicit m: Materializer, env: Environment) = Action.async { request =>
       tree(request).find(id).map { p =>
         val args = request.queryString.map { case (key, values) =>
           Arg(key, values.head)

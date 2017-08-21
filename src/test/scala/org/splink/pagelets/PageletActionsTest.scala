@@ -15,13 +15,12 @@ import play.api.test.{FakeRequest, StubControllerComponentsFactory}
 import play.api.test.Helpers._
 import play.twirl.api.Html
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.language.{implicitConversions, reflectiveCalls}
 
 class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockitoSugar with StubControllerComponentsFactory {
   implicit val system = ActorSystem()
   implicit val mat = ActorMaterializer()
-  implicit val ec = system.dispatcher
   implicit val env = Environment.simple()
   implicit val request = FakeRequest()
 
@@ -47,7 +46,6 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockitoS
     when(service.build(
       any[Leaf[_, _]],
       anyVararg[Arg])(
-      any[ExecutionContext],
       any[Request[AnyContent]])).thenReturn(result)
 
   val onError = Call("get", "error")

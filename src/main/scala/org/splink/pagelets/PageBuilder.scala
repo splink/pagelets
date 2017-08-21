@@ -2,13 +2,11 @@ package org.splink.pagelets
 
 import play.api.mvc.{AnyContent, Request}
 
-import scala.concurrent.ExecutionContext
-
 trait PageBuilder {
   def builder: PageBuilderService
 
   trait PageBuilderService {
-    def build(pagelet: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent]): PageletResult
+    def build(pagelet: Pagelet, args: Arg*)(implicit r: Request[AnyContent]): PageletResult
   }
 
 }
@@ -22,7 +20,7 @@ trait PageBuilderImpl extends PageBuilder {
 
     val log = play.api.Logger("PageBuilder")
 
-    override def build(pagelet: Pagelet, args: Arg*)(implicit ec: ExecutionContext, r: Request[AnyContent]) = {
+    override def build(pagelet: Pagelet, args: Arg*)(implicit r: Request[AnyContent]) = {
       val start = System.currentTimeMillis()
       val requestId = RequestId.create
 

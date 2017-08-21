@@ -11,19 +11,19 @@ trait LeafBuilder {
   def leafBuilderService: LeafBuilderService
 
   trait LeafBuilderService {
-    def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId)(
-      implicit ec: ExecutionContext, r: Request[AnyContent]): PageletResult
+    def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId)(implicit r: Request[AnyContent]): PageletResult
   }
 
 }
 
 trait LeafBuilderImpl extends LeafBuilder {
   self: ActionBuilder with BaseController =>
+
   override val leafBuilderService = new LeafBuilderService {
     val log = play.api.Logger("LeafBuilder").logger
+    implicit val ec: ExecutionContext = defaultExecutionContext
 
-    override def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId)(
-      implicit ec: ExecutionContext, r: Request[AnyContent]) = {
+    override def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId)(implicit r: Request[AnyContent]) = {
       log.info(s"$requestId Invoke pagelet ${leaf.id}")
 
       def stacktraceFor(t: Throwable) = t.getStackTrace.map("    " + _).mkString("\n")

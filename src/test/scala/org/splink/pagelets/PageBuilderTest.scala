@@ -36,8 +36,7 @@ class PageBuilderTest extends FlatSpec with Matchers with FutureHelper  with Stu
 
   val builder = new PageBuilderImpl with LeafBuilder {
     override val leafBuilderService = new LeafBuilderService {
-      override def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId)(
-        implicit ec: ExecutionContext, r: Request[AnyContent]) =
+      override def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId)(implicit r: Request[AnyContent]) =
         mkResult(leaf.id.name)
     }
   }.builder
