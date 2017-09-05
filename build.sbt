@@ -1,10 +1,11 @@
 name := """pagelets"""
-version := "0.0.5"
+version := "0.0.6"
 
 lazy val root = (project in file(".")).
   settings(Seq(
     organization := "org.splink",
     scalaVersion := "2.12.2",
+    crossScalaVersions := Seq("2.11.11", "2.12.2"),
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "org.scalatestplus.play" %% "scalatestplus-play" % "3.0.0" % Test,
@@ -24,7 +25,6 @@ lazy val root = (project in file(".")).
 
 import ReleaseTransformations._
 
-crossScalaVersions := Seq("2.11.11", "2.12.2")
 releaseCrossBuild := true
 
 lazy val publishSettings = Seq(
