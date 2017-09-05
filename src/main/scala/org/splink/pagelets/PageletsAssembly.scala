@@ -1,8 +1,10 @@
 package org.splink.pagelets
 
-import play.api.mvc.{ControllerComponents, InjectedController}
+import javax.inject.Inject
 
-class InjectedPageletsAssembly extends InjectedController with PageletsAssembly
+import play.api.mvc.{AbstractController, ControllerComponents}
+
+class InjectedPageletsAssembly @Inject() (cc: ControllerComponents) extends AbstractController(cc) with PageletsAssembly
 
 trait PageletsAssembly extends Pagelets
   with PageletActionsImpl
