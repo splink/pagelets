@@ -1,11 +1,13 @@
 name := """pagelets"""
-version := "0.0.6"
+version := "0.0.7-SNAPSHOT"
+
+
+import ReleaseTransformations._
 
 lazy val root = (project in file(".")).
   settings(Seq(
     organization := "org.splink",
     scalaVersion := "2.12.2",
-    crossScalaVersions := Seq("2.11.11", "2.12.2"),
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "org.scalatestplus.play" %% "scalatestplus-play" % "3.0.0" % Test,
@@ -23,11 +25,9 @@ lazy val root = (project in file(".")).
       "-language:existentials")
   ) ++ publishSettings)
 
-import ReleaseTransformations._
-
-releaseCrossBuild := true
-
 lazy val publishSettings = Seq(
+  releaseCrossBuild := true,
+  crossScalaVersions := Seq("2.11.11", "2.12.2"),
   publishMavenStyle := true,
   pomIncludeRepository := { _ => false },
   publishTo := {
