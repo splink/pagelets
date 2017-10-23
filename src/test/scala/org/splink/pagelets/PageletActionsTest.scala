@@ -100,22 +100,22 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockitoS
       val a = actions
       buildMock(a.builder)(mkResult("body"))
 
-      val action = a.PageAction.async(onError)(title, tree) { (_, page) =>
-        Html(s"${page.body}")
+      val action = a.PageAction.async(onError)(title, tree) { (request, page) =>
+        Html(s"${page.body}${title(request)}")
       }
 
       val result = action(request)
 
       status(result) must equal(OK)
-      contentAsString(result) must equal("body")
+      contentAsString(result) must equal("bodyTitle")
     }
 
     "invoke the error template if a pagelet declared as mandatory fails" in {
       val a = actions
       buildMock(a.builder)(mkResult("").copy(mandatoryFailedPagelets = Seq(Future.successful(true))))
 
-      val action = a.PageAction.async(onError)(title, tree) { (_, page) =>
-        Html(s"${page.body}")
+      val action = a.PageAction.async(onError)(title, tree) { (request, page) =>
+        Html(s"${page.body}${title(request)}")
       }
 
       val result = action(request)
@@ -129,13 +129,13 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockitoS
       val a = actions
       buildMock(a.builder)(mkResult("body"))
 
-      val action = a.PageAction.stream(title, tree) { (_, page) =>
-        page.body.map(b => Html(b.utf8String))
+      val action = a.PageAction.stream(title, tree) { (request, page) =>
+        page.body.map(b => Html(b.utf8String + title(request)))
       }
 
       val result = action(request)
       status(result) must equal(OK)
-      contentAsString(result) must equal("body")
+      contentAsString(result) must equal("bodyTitle")
     }
 
     // when the page is streamed, it's too late to redirect
@@ -143,13 +143,13 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockitoS
       val a = actions
       buildMock(a.builder)(mkResult("body").copy(mandatoryFailedPagelets = Seq(Future.successful(true))))
 
-      val action = a.PageAction.stream(title, tree) { (_, page) =>
-        page.body.map(b => Html(b.utf8String))
+      val action = a.PageAction.stream(title, tree) { (request, page) =>
+        page.body.map(b => Html(b.utf8String + title(request)))
       }
 
       val result = action(request)
       status(result) must equal(OK)
-      contentAsString(result) must equal("body")
+      contentAsString(result) must equal("bodyTitle")
     }
 
     "return a Page with Cookies" in {
@@ -158,13 +158,13 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockitoS
         mkResult("body").copy(
           cookies = Seq(Future.successful(Seq(Cookie("name", "value"))))))
 
-      val action = a.PageAction.stream(title, tree) { (_, page) =>
-        page.body.map(b => Html(b.utf8String))
+      val action = a.PageAction.stream(title, tree) { (request, page) =>
+        page.body.map(b => Html(b.utf8String + title(request)))
       }
 
       val result = action(request)
       status(result) must equal(OK)
-      contentAsString(result) must include("body")
+      contentAsString(result) must include("bodyTitle")
       contentAsString(result) must include("setCookie('name', 'value'")
     }
   }

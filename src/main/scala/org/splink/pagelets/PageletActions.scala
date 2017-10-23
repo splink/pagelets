@@ -10,7 +10,8 @@ import play.api.{Environment, Logger}
 import scala.concurrent.{ExecutionContext, Future}
 
 
-case class Head(metaTags: Seq[MetaTag] = Seq.empty,
+case class Head(title: String,
+                metaTags: Seq[MetaTag] = Seq.empty,
                 js: Option[Fingerprint] = None,
                 css: Option[Fingerprint] = None)
 
@@ -54,7 +55,7 @@ trait PageletActionsImpl extends PageletActions {
       val result = builder.build(tree(request), args: _*)
 
       (for {
-        page <- mkPage(result)
+        page <- mkPage(title(request), result)
         cookies <- Future.sequence(result.cookies)
         mandatoryPageletFailed <- Future.sequence(result.mandatoryFailedPagelets)
       } yield {
@@ -74,18 +75,18 @@ trait PageletActionsImpl extends PageletActions {
       implicit m: Materializer, env: Environment) = Action { implicit request =>
 
       val result = builder.build(tree(request), args: _*)
-      val page = mkPageStream(result)
+      val page = mkPageStream(title(request), result)
 
       Ok.chunked(template(request, page))
     }
 
-    def mkPage(result: PageletResult)(implicit r: RequestHeader, env: Environment, m: Materializer) = {
+    def mkPage(title: String, result: PageletResult)(implicit r: RequestHeader, env: Environment, m: Materializer) = {
       val (jsFinger, jsTopFinger, cssFinger) = updateResources(result)
 
       val eventualBody = result.body.runFold("")(_ + _.utf8String)
 
       eventualBody.map { body =>
-        Page(Head(result.metaTags, jsTopFinger, cssFinger), body, jsFinger)
+        Page(Head(title, result.metaTags, jsTopFinger, cssFinger), body, jsFinger)
       }
     }
 
@@ -115,10 +116,10 @@ trait PageletActionsImpl extends PageletActions {
       Source.combine(result.body, Source.fromFuture(cookies))(Concat.apply).filter(_.nonEmpty)
     }
 
-    def mkPageStream(result: PageletResult)(implicit r: RequestHeader, env: Environment, m: Materializer) = {
+    def mkPageStream(title: String, result: PageletResult)(implicit r: RequestHeader, env: Environment, m: Materializer) = {
       val (jsFinger, jsTopFinger, cssFinger) = updateResources(result)
 
-      PageStream(Head(result.metaTags, jsTopFinger, cssFinger),
+      PageStream(Head(title, result.metaTags, jsTopFinger, cssFinger),
         bodySourceWithCookies(result),
         jsFinger)
     }
