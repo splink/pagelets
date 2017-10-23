@@ -1,6 +1,4 @@
 name := """pagelets"""
-version := "0.0.7"
-
 
 import ReleaseTransformations._
 
@@ -27,7 +25,7 @@ lazy val root = (project in file(".")).
 
 lazy val publishSettings = Seq(
   releaseCrossBuild := true,
-  crossScalaVersions := Seq("2.11.11", "2.12.2"),
+  crossScalaVersions := Seq("2.11.11", "2.12.3"),
   publishMavenStyle := true,
   pomIncludeRepository := { _ => false },
   publishTo := {
@@ -52,14 +50,14 @@ lazy val publishSettings = Seq(
     checkSnapshotDependencies,
     inquireVersions,
     runClean,
-    runTest,
+    releaseStepCommandAndRemaining("+test"),
     setReleaseVersion,
     commitReleaseVersion,
     tagRelease,
-    ReleaseStep(action = Command.process("publishSigned", _), enableCrossBuild = true),
+    releaseStepCommandAndRemaining("+publishSigned"),
     setNextVersion,
     commitNextVersion,
-    ReleaseStep(action = Command.process("sonatypeReleaseAll", _), enableCrossBuild = true),
+    releaseStepCommandAndRemaining("sonatypeReleaseAll"),
     pushChanges
   )
 )
