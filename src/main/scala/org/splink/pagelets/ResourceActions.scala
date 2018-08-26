@@ -1,7 +1,8 @@
 package org.splink.pagelets
 
-import java.text.SimpleDateFormat
-import java.util.{Calendar, Date, TimeZone}
+import java.time.format.DateTimeFormatter
+import java.time.{ZoneId, ZonedDateTime}
+import java.time.temporal.ChronoUnit
 
 import play.api.mvc._
 
@@ -29,21 +30,20 @@ trait ResourceActionsImpl extends ResourceActions { self: Resources with BaseCon
   }
 
   def CacheHeaders(fingerprint: String, validFor: Duration = 365.days) = {
-    val format = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz")
-    format.setTimeZone(TimeZone.getTimeZone("GMT"))
+    def format(zdt: ZonedDateTime) =
+      DateTimeFormatter.RFC_1123_DATE_TIME.format(zdt)
 
-    val now = new Date()
-    val futureDate = Calendar.getInstance()
-    futureDate.add(Calendar.DATE, validFor.toDays.toInt)
+    val now = ZonedDateTime.now(ZoneId.of("GMT"))
+    val future = now.plusDays(365)
 
-    val diff = (futureDate.getTimeInMillis - now.getTime) / 1000
+    def elapsed = ChronoUnit.SECONDS.between(now, future)
 
     Seq(
-      DATE -> format.format(now),
-      LAST_MODIFIED -> format.format(now),
-      EXPIRES -> format.format(futureDate.getTime),
+      DATE -> format(now),
+      LAST_MODIFIED -> format(now),
+      EXPIRES -> format(future),
       ETAG -> s""""$fingerprint"""",
-      CACHE_CONTROL -> s"public, max-age: ${diff.toString}")
+      CACHE_CONTROL -> s"public, max-age: ${elapsed.toString}")
   }
 
 }
