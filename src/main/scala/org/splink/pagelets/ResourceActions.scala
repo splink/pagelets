@@ -34,7 +34,7 @@ trait ResourceActionsImpl extends ResourceActions { self: Resources with BaseCon
       DateTimeFormatter.RFC_1123_DATE_TIME.format(zdt)
 
     val now = ZonedDateTime.now(ZoneId.of("GMT"))
-    val future = now.plusDays(365)
+    val future = now.plusDays(validFor.toDays)
 
     def elapsed = ChronoUnit.SECONDS.between(now, future)
 
