@@ -61,7 +61,7 @@ To get the idea how Pagelets look in code, read on and check out the [play pagel
 Add the following lines to your build.sbt file:
 
 ~~~scala
-libraryDependencies += "org.splink" %% "pagelets" % "0.0.7
+libraryDependencies += "org.splink" %% "pagelets" % "0.0.8
 
 routesImport += "org.splink.pagelets.Binders._"
 ~~~
