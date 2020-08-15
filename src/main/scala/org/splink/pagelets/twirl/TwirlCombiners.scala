@@ -19,10 +19,10 @@ object TwirlCombiners {
     implicit ec: ExecutionContext, m: Materializer): PageletResult = {
 
     val htmls = Future.traverse(results) { r =>
-      r.body.runFold(HtmlFormat.empty)((acc, next) => Html(acc + next.utf8String))
+      r.body.runFold(HtmlFormat.empty)((acc, next) => Html(acc.toString + next.utf8String))
     }
 
-    val source = Source.fromFuture(htmls.map(xs => ByteString(template(xs).body)))
+    val source = Source.future(htmls.map(xs => ByteString(template(xs).body)))
 
     combineAssets(results)(source)
   }

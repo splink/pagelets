@@ -5,15 +5,16 @@ import ReleaseTransformations._
 lazy val root = (project in file(".")).
   settings(Seq(
     organization := "org.splink",
-    scalaVersion := "2.12.8",
+    scalaVersion := "2.13.1",
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "org.scalatestplus.play" %% "scalatestplus-play" % "3.0.0" % Test,
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.6.0" % Test,
+      "commons-codec" % "commons-codec" % "1.9",
+      "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % Test,
+      "org.scalamock" %% "scalamock" % "4.4.0" % Test,
       "org.mockito" % "mockito-core" % "1.10.19" % Test,
       "ch.qos.logback" % "logback-classic" % "1.1.7" % Test,
-      "com.typesafe.play" %% "play" % "2.6.23",
-      "com.typesafe.akka" %% "akka-stream" % "2.5.21"),
+      "com.typesafe.play" %% "play" % "2.8.2"
+    ),
     scalacOptions ++= Seq(
       "-unchecked",
       "-deprecation",
@@ -25,7 +26,7 @@ lazy val root = (project in file(".")).
 
 lazy val publishSettings = Seq(
   releaseCrossBuild := true,
-  crossScalaVersions := Seq("2.11.11", "2.12.8"),
+  crossScalaVersions := Seq("2.12.8", "2.13.1"),
   publishMavenStyle := true,
   pomIncludeRepository := { _ => false },
   publishTo := {

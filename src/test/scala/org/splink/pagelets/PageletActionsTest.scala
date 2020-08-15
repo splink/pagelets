@@ -1,12 +1,9 @@
 package org.splink.pagelets
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import org.mockito.Matchers._
-import org.mockito.Mockito._
-import org.scalatest.mockito.MockitoSugar
+import org.scalamock.scalatest.MockFactory
 import org.scalatestplus.play.PlaySpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Environment
@@ -18,9 +15,8 @@ import play.twirl.api.Html
 import scala.concurrent.Future
 import scala.language.{implicitConversions, reflectiveCalls}
 
-class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockitoSugar with StubControllerComponentsFactory {
+class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockFactory with StubControllerComponentsFactory {
   implicit val system = ActorSystem()
-  implicit val mat = ActorMaterializer()
   implicit val env = Environment.simple()
   implicit val request = FakeRequest()
 
@@ -34,29 +30,30 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockitoS
     override implicit def treeOps(tree: Tree): TreeOps = opsMock
 
     override val resources: ResourceProvider = mock[ResourceProvider]
+    (resources.update(_: Seq[Resource])(_: Environment)).expects(*, *).
+      returning(Some(Fingerprint("print"))).
+      anyNumberOfTimes
   }
 
-  def leaf = mock[Leaf[_,_]]
-  def tree(r: RequestHeader) = mock[Tree]
+  def leaf = Leaf(Symbol("id"), null)
+  def tree(r: RequestHeader) = Tree(Symbol("id"), Seq.empty)
   def title(r: RequestHeader) = "Title"
 
   def mkResult(body: String) = PageletResult(Source.single(ByteString(body)))
 
   def buildMock(service: PageBuilder#PageBuilderService)(result: PageletResult) =
-    when(service.build(
-      any[Leaf[_, _]],
-      anyVararg[Arg])(
-      any[Request[AnyContent]])).thenReturn(result)
+    (service.build(_: Pagelet, _: Arg)(_: Request[AnyContent])).expects(*, *, *).returning(result).anyNumberOfTimes()
 
   val onError = Call("get", "error")
 
   "PageletAction" should {
     "return a Pagelet if the tree contains the pagelet for the given id" in {
       val a = actions
-      when(a.opsMock.find('one)).thenReturn(Some(leaf))
+      (a.opsMock.find _).expects(Symbol("one")).returning(Some(leaf))
+
       buildMock(a.builder)(mkResult("body"))
 
-      val action = a.PageletAction.async(onError)(tree, 'one) { (_, page) =>
+      val action = a.PageletAction.async(onError)(tree, Symbol("one")) { (_, page) =>
         Html(s"${page.body}")
       }
 
@@ -68,10 +65,10 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockitoS
 
     "return NotFound if the tree does not contain a pagelet for the given id" in {
       val a = actions
-      when(a.opsMock.find('one)).thenReturn(None)
+      (a.opsMock.find _).expects(Symbol("one")).returning(None)
       buildMock(a.builder)(mkResult("body"))
 
-      val action = a.PageletAction.async(onError)(tree, 'one) { (_, page) =>
+      val action = a.PageletAction.async(onError)(tree, Symbol("one")) { (_, page) =>
         Html(s"${page.body}")
       }
 
@@ -82,10 +79,10 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockitoS
 
     "redirect if a pagelet declared as mandatory fails" in {
       val a = actions
-      when(a.opsMock.find('one)).thenReturn(Some(leaf))
+      (a.opsMock.find _).expects(Symbol("one")).returning(Some(leaf))
       buildMock(a.builder)(mkResult("").copy(mandatoryFailedPagelets = Seq(Future.successful(true))))
 
-      val action = a.PageletAction.async(onError)(tree, 'one) { (_, page) =>
+      val action = a.PageletAction.async(onError)(tree, Symbol("one")) { (_, page) =>
         Html(s"${page.body}")
       }
 

@@ -1,79 +1,78 @@
 package org.splink.pagelets
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import helpers.FutureHelper
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.flatspec.AnyFlatSpec
 import play.api.mvc.Cookie
 
 import scala.concurrent.Future
 
-class PageletTest extends FlatSpec with Matchers with FutureHelper {
+class PageletTest extends AnyFlatSpec with Matchers with FutureHelper {
   implicit val system = ActorSystem()
-  implicit val mat = ActorMaterializer()
 
   "Leaf#equals" should "identify equal Leaf nodes" in {
     val fnc = () => "someFunction"
-    val a = Leaf('one, FunctionInfo(fnc, Nil))
-    val b = Leaf('one, FunctionInfo(fnc, Nil))
+    val a = Leaf(Symbol("one"), FunctionInfo(fnc, Nil))
+    val b = Leaf(Symbol("one"), FunctionInfo(fnc, Nil))
 
     a should equal(b)
   }
 
   it should "identify unequal Leaf nodes" in {
     val fnc = () => "someFunction"
-    val a = Leaf('one, FunctionInfo(fnc, Nil))
-    val b = Leaf('two, FunctionInfo(fnc, Nil))
+    val a = Leaf(Symbol("one"), FunctionInfo(fnc, Nil))
+    val b = Leaf(Symbol("two"), FunctionInfo(fnc, Nil))
 
     a should not equal b
   }
 
   "Tree#equals" should "identify equal Tree nodes" in {
-    val a = Tree('one, Seq.empty, Tree.combine)
-    val b = Tree('one, Seq.empty, Tree.combine)
+    val a = Tree(Symbol("one"), Seq.empty, Tree.combine)
+    val b = Tree(Symbol("one"), Seq.empty, Tree.combine)
 
     a should equal(b)
   }
 
   it should "identify unequal Tree nodes" in {
-    val a = Tree('one, Seq.empty, Tree.combine)
-    val b = Tree('two, Seq.empty, Tree.combine)
+    val a = Tree(Symbol("one"), Seq.empty, Tree.combine)
+    val b = Tree(Symbol("two"), Seq.empty, Tree.combine)
 
     a should not equal b
   }
 
   it should "identify equal Tree nodes when nested" in {
     val fnc = () => "someFunction"
-    val l1 = Leaf('one, FunctionInfo(fnc, Nil))
-    val l2 = Leaf('two, FunctionInfo(fnc, Nil))
+    val l1 = Leaf(Symbol("one"), FunctionInfo(fnc, Nil))
+    val l2 = Leaf(Symbol("two"), FunctionInfo(fnc, Nil))
 
-    val a = Tree('one, Seq(l1, l2))
-    val b = Tree('one, Seq(l1, l2))
+    val a = Tree(Symbol("one"), Seq(l1, l2))
+    val b = Tree(Symbol("one"), Seq(l1, l2))
 
     a should equal(b)
   }
 
   it should "identify unequal Tree nodes when nested" in {
     val fnc = () => "someFunction"
-    val l1 = Leaf('one, FunctionInfo(fnc, Nil))
-    val l2 = Leaf('two, FunctionInfo(fnc, Nil))
+    val l1 = Leaf(Symbol("one"), FunctionInfo(fnc, Nil))
+    val l2 = Leaf(Symbol("two"), FunctionInfo(fnc, Nil))
 
-    val a = Tree('one, Seq(l1, l2))
-    val b = Tree('one, Seq(l1))
+    val a = Tree(Symbol("one"), Seq(l1, l2))
+    val b = Tree(Symbol("one"), Seq(l1))
 
     a should not equal b
   }
 
   it should "identify unequal Tree nodes when nested (2)" in {
     val fnc = () => "someFunction"
-    val l1 = Leaf('one, FunctionInfo(fnc, Nil))
-    val l2 = Leaf('two, FunctionInfo(fnc, Nil))
-    val l3 = Leaf('three, FunctionInfo(fnc, Nil))
+    val l1 = Leaf(Symbol("one"), FunctionInfo(fnc, Nil))
+    val l2 = Leaf(Symbol("two"), FunctionInfo(fnc, Nil))
+    val l3 = Leaf(Symbol("three"), FunctionInfo(fnc, Nil))
 
-    val a = Tree('one, Seq(l1, l2))
-    val b = Tree('one, Seq(l1, l3))
+    val a = Tree(Symbol("one"), Seq(l1, l2))
+    val b = Tree(Symbol("one"), Seq(l1, l3))
 
     a should not equal b
   }
@@ -82,11 +81,11 @@ class PageletTest extends FlatSpec with Matchers with FutureHelper {
     def combine(results: Seq[PageletResult]) = Tree.combine(results)
     val combineFnc = combine _
 
-    val a = Tree('one, Seq.empty, combineFnc)
-    val b =  a.copy(id = 'two)
+    val a = Tree(Symbol("one"), Seq.empty, combineFnc)
+    val b =  a.copy(id = Symbol("two"))
 
-    a.id should equal('one)
-    b.id should equal('two)
+    a.id should equal(Symbol("one"))
+    b.id should equal(Symbol("two"))
     b.children should equal(Seq.empty)
     b.combine should equal(combineFnc)
   }

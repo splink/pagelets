@@ -1,10 +1,11 @@
 package org.splink.pagelets
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.flatspec.AnyFlatSpec
 import org.splink.pagelets.FunctionMacros._
 import play.api.mvc.{Action, Results}
 import play.api.test.StubControllerComponentsFactory
 
-class FunctionMacrosTest extends FlatSpec with Matchers with StubControllerComponentsFactory {
+class FunctionMacrosTest extends AnyFlatSpec with Matchers with StubControllerComponentsFactory {
 
   val Action = stubControllerComponents().actionBuilder
 
@@ -15,7 +16,7 @@ class FunctionMacrosTest extends FlatSpec with Matchers with StubControllerCompo
     def f2(s: String) = Action(Results.Ok(s"f2($s)"))
     def f3(s: String, i: Int) = Action(Results.Ok(s"f2($s, $i)"))
     def f4(c: Complex) = Action(Results.Ok(s"f4($c)"))
-    val f5: (String, Int) => Action[_] = (s: String, i: Int) => Action(Results.Ok(s"f5($s)"))
+    val f5: (String, Int) => Action[_] = (s: String, _: Int) => Action(Results.Ok(s"f5($s)"))
   }
 
   "A function without parameters" should "not yield any types" in {

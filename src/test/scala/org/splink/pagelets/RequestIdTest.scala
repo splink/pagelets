@@ -1,8 +1,9 @@
 package org.splink.pagelets
 
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.flatspec.AnyFlatSpec
 
-class RequestIdTest extends FlatSpec with Matchers {
+class RequestIdTest extends AnyFlatSpec with Matchers {
   "RequestId.create" should "create a 6 char request id wrapped in brackets" in {
     RequestId.create.id should (startWith ("[") and endWith ("]") and have length 8)
   }

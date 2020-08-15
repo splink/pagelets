@@ -1,8 +1,9 @@
 package org.splink.pagelets
 
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.flatspec.AnyFlatSpec
 
-class ResourceTest extends FlatSpec with Matchers {
+class ResourceTest extends AnyFlatSpec with Matchers {
 
   "Javascript.name" should "return 'js'" in {
     Javascript.name should equal("js")

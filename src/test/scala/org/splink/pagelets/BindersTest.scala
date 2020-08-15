@@ -1,21 +1,22 @@
 package org.splink.pagelets
 
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.flatspec.AnyFlatSpec
 
-class BindersTest extends FlatSpec with Matchers {
+class BindersTest extends AnyFlatSpec with Matchers {
 
   import Binders._
 
   "PathBindableSymbol" should "bind a String to a Symbol" in {
-    PathBindableSymbol.bind("one", "oneValue").right.get should equal('oneValue)
+    PathBindableSymbol.bind("one", "oneValue").toOption.get should equal(Symbol("oneValue"))
   }
 
   it should "bind a String which begins with an Int to a Symbol" in {
-    PathBindableSymbol.bind("one", "1").right.get should equal(Symbol("1"))
+    PathBindableSymbol.bind("one", "1").toOption.get should equal(Symbol("1"))
   }
 
   it should "unbind a String from a Symbol" in {
-    PathBindableSymbol.unbind("one", 'oneValue) should equal("oneValue")
+    PathBindableSymbol.unbind("one", Symbol("oneValue")) should equal("oneValue")
   }
 
   it should "unbind a String which begins with an Int from a Symbol" in {

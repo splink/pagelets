@@ -3,7 +3,7 @@ package org.splink.pagelets
 import org.splink.pagelets.Exceptions.{PageletException, TypeException}
 import play.api.mvc._
 
-trait ActionBuilder {
+trait PageletActionBuilder {
 
   def actionService: ActionService
 
@@ -12,7 +12,7 @@ trait ActionBuilder {
   }
 
 }
-trait ActionBuilderImpl extends ActionBuilder {
+trait PageletActionBuilderImpl extends PageletActionBuilder {
 
   override def actionService: ActionService = new ActionServiceImpl
 
@@ -81,7 +81,7 @@ trait ActionBuilderImpl extends ActionBuilder {
 
     def eitherSeq[A, B](e: Seq[Either[A, B]]): Either[A, Seq[B]] =
       e.foldRight(Right(Seq.empty): Either[A, Seq[B]]) {
-        (next, acc) => for (xs <- acc.right; x <- next.right) yield xs.+:(x)
+        (next, acc) => for (xs <- acc; x <- next) yield xs.+:(x)
       }
   }
 

@@ -1,11 +1,13 @@
 package org.splink.pagelets
 
-import org.scalatest.{BeforeAndAfter, FlatSpec, Matchers}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.BeforeAndAfter
 import play.api.{Environment, Mode}
 
 import scala.language.reflectiveCalls
 
-class ResourcesTest extends FlatSpec with Matchers with BeforeAndAfter {
+class ResourcesTest extends AnyFlatSpec with Matchers with BeforeAndAfter {
 
   implicit val env = Environment.simple()
 
