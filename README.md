@@ -54,15 +54,27 @@ then point your browser to [http://localhost:9000](http://localhost:9000)
 
 ### Quickstart
 To get the idea how Pagelets look in code, read on and check out the [play pagelets seed project](https://github.com/splink/pagelets-seed) afterwards.
-> The Pagelets Module requires Play Framework 2.5.x (0.0.3) or 2.6.x (0.0.4+) and will support future Play Versions as well. 
-0.0.7+ can be used with scala 2.11 and scala 2.12.
-
+> The Pagelets Module depends on the Play Framework.
 
 Add the following lines to your build.sbt file:
 
+
+# Play 2.5 (Scala 2.11)
+~~~scala
+libraryDependencies += "org.splink" %% "pagelets" % "0.0.3
+~~~
+
+# Play 2.6 (Scala 2.11 | Scala 2.12)
 ~~~scala
 libraryDependencies += "org.splink" %% "pagelets" % "0.0.8
+~~~
 
+# Play 2.8 (Scala 2.12 | Scala 2.13)
+~~~scala
+libraryDependencies += "org.splink" %% "pagelets" % "0.0.9
+~~~
+
+~~~scala
 routesImport += "org.splink.pagelets.Binders._"
 ~~~
 
