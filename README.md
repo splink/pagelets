@@ -59,17 +59,17 @@ To get the idea how Pagelets look in code, read on and check out the [play pagel
 Add the following lines to your build.sbt file:
 
 
-# Play 2.5 (Scala 2.11)
+##### Play 2.5 (Scala 2.11)
 ~~~scala
 libraryDependencies += "org.splink" %% "pagelets" % "0.0.3
 ~~~
 
-# Play 2.6 (Scala 2.11 | Scala 2.12)
+##### Play 2.6 (Scala 2.11 | Scala 2.12)
 ~~~scala
 libraryDependencies += "org.splink" %% "pagelets" % "0.0.8
 ~~~
 
-# Play 2.8 (Scala 2.12 | Scala 2.13)
+##### Play 2.8 (Scala 2.12 | Scala 2.13)
 ~~~scala
 libraryDependencies += "org.splink" %% "pagelets" % "0.0.9
 ~~~
