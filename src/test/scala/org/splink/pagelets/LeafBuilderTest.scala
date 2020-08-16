@@ -1,20 +1,19 @@
 package org.splink.pagelets
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import helpers.FutureHelper
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.flatspec.AnyFlatSpec
 import play.api.mvc._
 import play.api.test.{FakeRequest, StubControllerComponentsFactory}
 
 import scala.concurrent.Future
 import scala.language.implicitConversions
 
-class LeafBuilderTest extends FlatSpec with Matchers with FutureHelper with StubControllerComponentsFactory {
+class LeafBuilderTest extends AnyFlatSpec with Matchers with FutureHelper with StubControllerComponentsFactory {
   implicit val system = ActorSystem()
-  implicit val mat = ActorMaterializer()
   implicit val ec = system.dispatcher
   implicit val request = FakeRequest()
 
@@ -33,20 +32,20 @@ class LeafBuilderTest extends FlatSpec with Matchers with FutureHelper with Stub
   })
 
   def mkResult(body: String) = PageletResult(
-    body = Source.fromFuture(Future.successful(ByteString(body))),
+    body = Source.future(Future.successful(ByteString(body))),
     cookies = Seq(Future(Seq.empty)))
 
-  val builder = new LeafBuilderImpl with BaseController with ActionBuilderImpl {
+  val builder = new LeafBuilderImpl with BaseController with PageletActionBuilderImpl {
     override def controllerComponents: ControllerComponents = stubControllerComponents()
   }
 
   val requestId = RequestId("RequestId")
 
   def build[T](info: FunctionInfo[T], isMandatory: Boolean): PageletResult =
-    builder.leafBuilderService.build(Leaf('one, info, isMandatory = isMandatory), Seq.empty, requestId)
+    builder.leafBuilderService.build(Leaf(Symbol("one"), info, isMandatory = isMandatory), Seq.empty, requestId)
 
   def buildWithFallback[T, U](info: FunctionInfo[T], fallback: FunctionInfo[U], isMandatory: Boolean): PageletResult =
-    builder.leafBuilderService.build(Leaf('one, info, isMandatory = isMandatory).withFallback(fallback), Seq.empty, requestId)
+    builder.leafBuilderService.build(Leaf(Symbol("one"), info, isMandatory = isMandatory).withFallback(fallback), Seq.empty, requestId)
 
   /**
     * Without fallback

@@ -113,7 +113,7 @@ trait PageletActionsImpl extends PageletActions {
 
       val cookies = Future.sequence(result.cookies).map(cookies => cookieJs(cookies.flatten))
 
-      Source.combine(result.body, Source.fromFuture(cookies))(Concat.apply).filter(_.nonEmpty)
+      Source.combine(result.body, Source.future(cookies))(Concat.apply).filter(_.nonEmpty)
     }
 
     def mkPageStream(title: String, result: PageletResult)(implicit r: RequestHeader, env: Environment, m: Materializer) = {

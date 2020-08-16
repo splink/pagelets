@@ -1,23 +1,23 @@
 package org.splink.pagelets
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import helpers.FutureHelper
-import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{EitherValues, FlatSpec, Matchers}
+import org.scalamock.scalatest.MockFactory
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.EitherValues
 import org.splink.pagelets.Exceptions.TypeException
-import play.api.mvc.{Result, Results}
+import play.api.mvc.Results
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, StubControllerComponentsFactory}
 
-class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with EitherValues with MockitoSugar with StubControllerComponentsFactory {
+class PageletActionBuilderTest extends AnyFlatSpec with Matchers with FutureHelper with EitherValues with MockFactory with StubControllerComponentsFactory {
 
   implicit val system = ActorSystem()
-  implicit val mat = ActorMaterializer()
   implicit val ec = system.dispatcher
   implicit val request = FakeRequest()
 
-  val tools = new ActionBuilderImpl {}
+  val tools = new PageletActionBuilderImpl {}
   val Action = stubControllerComponents().actionBuilder
 
   "ActionService#execute" should
@@ -29,7 +29,7 @@ class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with Ei
 
     val args = Seq(Arg("s", "Hello!"))
 
-    val action = tools.actionService.execute('someId, info, args).right.get
+    val action = tools.actionService.execute(Symbol("someId"), info, args).toOption.get
     contentAsString(action(request)) should equal("Hello!")
   }
 
@@ -41,7 +41,7 @@ class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with Ei
 
     val args = Seq(Arg("o", Some("optional")))
 
-    val action = tools.actionService.execute('someId, info, args).right.get
+    val action = tools.actionService.execute(Symbol("someId"), info, args).toOption.get
     contentAsString(action(request)) should equal("Some(optional)")
   }
 
@@ -49,11 +49,11 @@ class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with Ei
 
     def fnc(i: Int, o: Option[String], custom: Test2) = Action(Results.Ok(i.toString + o.toString + custom.toString))
 
-    val info = FunctionInfo(fnc _, ("i", "scala.Int") :: ("o", "scala.Option") :: ("custom", "org.splink.pagelets.ActionBuilderTest.Test2") :: Nil)
+    val info = FunctionInfo(fnc _, ("i", "scala.Int") :: ("o", "scala.Option") :: ("custom", "org.splink.pagelets.PageletActionBuilderTest.Test2") :: Nil)
 
     val args = Seq(Arg("i", 1), Arg("o", Some("optional")), Arg("custom", Test2("custom")))
 
-    val action = tools.actionService.execute('someId, info, args).right.get
+    val action = tools.actionService.execute(Symbol("someId"), info, args).toOption.get
     contentAsString(action(request)) should equal("1Some(optional)Test2(custom)")
   }
 
@@ -63,7 +63,7 @@ class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with Ei
 
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") :: Nil)
 
-    val result = tools.actionService.execute('someId, info, Seq.empty).left.get
+    val result = tools.actionService.execute(Symbol("someId"), info, Seq.empty).swap.toOption.get
 
     result shouldBe a[TypeException]
     result.getMessage should equal("'someId: 's:java.lang.String' not found in Arguments()")
@@ -90,13 +90,13 @@ class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with Ei
     val args = Seq(Arg("s0", "s0"), Arg("s1", "s1"), Arg("s2", "s2"), Arg("s3", "s3"), Arg("s4", "s4"),
       Arg("s5", "s5"), Arg("s6", "s6"), Arg("s7", "s7"), Arg("s8", "s8"), Arg("s9", "s9"), Arg("s10", "s10"))
 
-    val result = tools.actionService.execute('someId, info, args).left.get
+    val result = tools.actionService.execute(Symbol("someId"), info, args).swap.toOption.get
 
     result shouldBe a[TypeException]
     result.getMessage should equal("'someId: too many arguments: 11")
   }
 
-  def actionService = tools.actionService.asInstanceOf[ActionBuilderImpl#ActionServiceImpl]
+  def actionService = tools.actionService.asInstanceOf[PageletActionBuilderImpl#ActionServiceImpl]
 
   "ActionService#values" should "extract the Arg values if the FunctionInfo.types align with the args" in {
     def fnc(s: String, d: Double) = s + d
@@ -104,7 +104,7 @@ class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with Ei
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") ::("d", "scala.Double") :: Nil)
     val args = Seq(Arg("s", "hello"), Arg("d", 1d))
 
-    actionService.values(info, args).right.value should equal(Seq("hello", 1d))
+    actionService.values(info, args).toOption.get should equal(Seq("hello", 1d))
   }
 
   it should "extract the Arg values if there are more args then types" in {
@@ -113,7 +113,7 @@ class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with Ei
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") ::("d", "scala.Double") :: Nil)
     val args = Seq(Arg("s", "hello"), Arg("d", 1d), Arg("i", 1))
 
-    actionService.values(info, args).right.value should equal(Seq("hello", 1d))
+    actionService.values(info, args).toOption.get should equal(Seq("hello", 1d))
   }
 
   it should "yield an ArgError if the types do not match" in {
@@ -169,7 +169,7 @@ class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with Ei
   }
 
   it should "return the classname for Long" in {
-    val name = actionService.scalaClassNameFor(1l)
+    val name = actionService.scalaClassNameFor(1L)
     name should equal("scala.Long")
   }
 
@@ -194,7 +194,7 @@ class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with Ei
   }
 
   it should "return the classname for Symbol" in {
-    val name = actionService.scalaClassNameFor('someSymbol)
+    val name = actionService.scalaClassNameFor(Symbol("someSymbol"))
     name should equal("scala.Symbol")
   }
 
@@ -208,7 +208,7 @@ class ActionBuilderTest extends FlatSpec with Matchers with FutureHelper with Ei
 
   it should "return the classname for any custom class" in {
     val name = actionService.scalaClassNameFor(Test2("yo"))
-    name should equal("org.splink.pagelets.ActionBuilderTest.Test2")
+    name should equal("org.splink.pagelets.PageletActionBuilderTest.Test2")
   }
 
   it should "return the Option classname Some[_]" in {
