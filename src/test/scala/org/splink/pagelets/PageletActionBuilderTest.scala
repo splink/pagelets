@@ -66,7 +66,8 @@ class PageletActionBuilderTest extends AnyFlatSpec with Matchers with FutureHelp
     val result = tools.actionService.execute(Symbol("someId"), info, Seq.empty).swap.toOption.get
 
     result shouldBe a[TypeException]
-    result.getMessage should equal("'someId: 's:java.lang.String' not found in Arguments()")
+    result.getMessage should include("someId")
+    result.getMessage should include("s:java.lang.String' not found in Arguments()")
   }
 
   it should "produce a TypeException if FunctionInfo.fnc requires more arguments then the execute function supports" in {
@@ -93,7 +94,8 @@ class PageletActionBuilderTest extends AnyFlatSpec with Matchers with FutureHelp
     val result = tools.actionService.execute(Symbol("someId"), info, args).swap.toOption.get
 
     result shouldBe a[TypeException]
-    result.getMessage should equal("'someId: too many arguments: 11")
+    result.getMessage should include("someId")
+    result.getMessage should include("too many arguments: 11")
   }
 
   def actionService = tools.actionService.asInstanceOf[PageletActionBuilderImpl#ActionServiceImpl]

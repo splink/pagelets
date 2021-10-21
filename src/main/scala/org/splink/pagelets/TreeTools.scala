@@ -32,7 +32,7 @@ trait TreeToolsImpl extends TreeTools { self: BaseController =>
     override def skip(id: Symbol) = {
       def f = Action(Results.Ok)
       log.debug(s"skip $id")
-      replace(id, Leaf(id, FunctionInfo(f _, Nil)))
+      replace(id, Leaf(id, FunctionInfo(() => f, Nil)))
     }
 
     override def replace(id: Symbol, other: Pagelet): Tree = {

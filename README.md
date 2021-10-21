@@ -31,27 +31,6 @@ client and pagelets appear sequentially as soon as they complete.
 
 Pagelets are non invasive and not opinionated: You can stick to your code style and apply the patterns you prefer. Use your favorite dependency injection mechanism and template engine. You don't need to apply the goodness of pagelets everywhere, only employ pagelets where you need them. Pagelets also do not introduce additional dependencies to your project. 
 
-### Usage
-
-#### Activator
-Check out the activator template to get started with a sample project and see a demonstration of Play Pagelets.
-The project is a small multi-language website, which shows some of the features and typical usage patterns. 
-
-Enter
-```bash
-activator new
-```
-then select the play-pagelets-seed template by entering:
-```bash
-play-pagelets-seed
-```
-then activator creates a new project based on the [play pagelets activator template](https://github.com/splink/pagelets-seed). To see the project in action, navigate to the play-pagelets-seed folder and enter:
-```bash
-activator run
-```
-then point your browser to [http://localhost:9000](http://localhost:9000)
-
-
 ### Quickstart
 To get the idea how Pagelets look in code, read on and check out the [play pagelets seed project](https://github.com/splink/pagelets-seed) afterwards.
 > The Pagelets Module depends on the Play Framework.

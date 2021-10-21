@@ -52,37 +52,37 @@ class LeafBuilderTest extends AnyFlatSpec with Matchers with FutureHelper with S
     */
 
   "LeafBuilder#build (mandatory without fallback)" should "yield the body of the result" in {
-    val result = build(FunctionInfo(successAction _), isMandatory = true)
+    val result = build(FunctionInfo(() => successAction), isMandatory = true)
     result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
     result.body.consume should equal("action")
   }
 
   it should "yield an empty body if an Action fails" in {
-    val result = build(FunctionInfo(failedAction _), isMandatory = true)
+    val result = build(FunctionInfo(() => failedAction), isMandatory = true)
     result.mandatoryFailedPagelets.map(_.futureValue).head should be(true)
     result.body.consume should equal("")
   }
 
     it should "yield an empty body if an async Action fails" in {
-      val result = build(FunctionInfo(failedAsyncAction _), isMandatory = true)
+      val result = build(FunctionInfo(() => failedAsyncAction), isMandatory = true)
       result.mandatoryFailedPagelets.map(_.futureValue).head should be(true)
       result.body.consume should equal("")
     }
 
 
     "LeafBuilder#build (not mandatory without fallback)" should "yield the body of the result" in {
-      val result = build(FunctionInfo(successAction _), isMandatory = false)
+      val result = build(FunctionInfo(() => successAction), isMandatory = false)
       result.body.consume should equal("action")
     }
 
     it should "yield an empty body if an Action fails" in {
-      val result = build(FunctionInfo(failedAction _), isMandatory = false)
+      val result = build(FunctionInfo(() => failedAction), isMandatory = false)
       result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
       result.body.consume should equal("")
     }
 
     it should "yield an empty body if an async Action fails" in {
-      val result = build(FunctionInfo(failedAsyncAction _), isMandatory = false)
+      val result = build(FunctionInfo(() => failedAsyncAction), isMandatory = false)
       result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
       result.body.consume should equal("")
     }
@@ -94,19 +94,19 @@ class LeafBuilderTest extends AnyFlatSpec with Matchers with FutureHelper with S
     // Not root node: Successful fallback
 
     "LeafBuilder#build (mandatory with successful fallback)" should "yield the body of the result" in {
-      val result = buildWithFallback(FunctionInfo(successAction _), FunctionInfo(failedAction _), isMandatory = true)
+      val result = buildWithFallback(FunctionInfo(() => successAction), FunctionInfo(() => failedAction), isMandatory = true)
       result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
       result.body.consume should equal("action")
     }
 
     it should "yield the fallback if an Action fails" in {
-      val result = buildWithFallback(FunctionInfo(failedAction _), FunctionInfo(successAction _), isMandatory = true)
+      val result = buildWithFallback(FunctionInfo(() => failedAction), FunctionInfo(() => successAction), isMandatory = true)
       result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
       result.body.consume should equal("action")
     }
 
     it should "yield the fallback if an async Action fails" in {
-      val result = buildWithFallback(FunctionInfo(failedAsyncAction _), FunctionInfo(successAction _), isMandatory = true)
+      val result = buildWithFallback(FunctionInfo(() => failedAsyncAction), FunctionInfo(() => successAction), isMandatory = true)
       result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
       result.body.consume should equal("action")
     }
@@ -114,19 +114,19 @@ class LeafBuilderTest extends AnyFlatSpec with Matchers with FutureHelper with S
     // mandatory node: Successful fallback
 
     "LeafBuilder#build (not mandatory with successful fallback)" should "yield the body of the result" in {
-      val result = buildWithFallback(FunctionInfo(successAction _), FunctionInfo(failedAction _), isMandatory = false)
+      val result = buildWithFallback(FunctionInfo(() => successAction), FunctionInfo(() => failedAction), isMandatory = false)
       result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
       result.body.consume should equal("action")
     }
 
     it should "yield the the fallback, if an Action fails" in {
-      val result = buildWithFallback(FunctionInfo(failedAction _), FunctionInfo(successAction _), isMandatory = false)
+      val result = buildWithFallback(FunctionInfo(() => failedAction), FunctionInfo(() => successAction), isMandatory = false)
       result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
       result.body.consume should equal("action")
     }
 
     it should "yield yield the fallback, if an async Action fails" in {
-      val result = buildWithFallback(FunctionInfo(failedAsyncAction _), FunctionInfo(successAction _), isMandatory = false)
+      val result = buildWithFallback(FunctionInfo(() => failedAsyncAction), FunctionInfo(() => successAction), isMandatory = false)
       result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
       result.body.consume should equal("action")
     }
@@ -134,13 +134,13 @@ class LeafBuilderTest extends AnyFlatSpec with Matchers with FutureHelper with S
     // Sync: default and fallback fail
 
     "LeafBuilder#build (mandatory with failing fallback)" should "yield an empty body if the default and fallback Actions fail" in {
-      val result = buildWithFallback(FunctionInfo(failedAction _), FunctionInfo(failedAction _), isMandatory = true)
+      val result = buildWithFallback(FunctionInfo(() => failedAction), FunctionInfo(() => failedAction), isMandatory = true)
       result.mandatoryFailedPagelets.map(_.futureValue).head should be(true)
       result.body.consume should equal("")
     }
 
     "LeafBuilder#build (not mandatory with failing fallback)" should "yield an empty body if the default and fallback Actions fail" in {
-      val result = buildWithFallback(FunctionInfo(failedAction _), FunctionInfo(failedAction), isMandatory = false)
+      val result = buildWithFallback(FunctionInfo(() => failedAction), FunctionInfo(() => failedAction), isMandatory = false)
       result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
       result.body.consume should equal("")
     }
@@ -148,13 +148,13 @@ class LeafBuilderTest extends AnyFlatSpec with Matchers with FutureHelper with S
     // Async: default and fallback fail
 
     "LeafBuilder#build (mandatory with failing fallback)" should "yield an empty body if the default and fallback async Actions fail" in {
-      val result = buildWithFallback(FunctionInfo(failedAsyncAction _), FunctionInfo(failedAsyncAction _), isMandatory = true)
+      val result = buildWithFallback(FunctionInfo(() => failedAsyncAction), FunctionInfo(() => failedAsyncAction), isMandatory = true)
       result.mandatoryFailedPagelets.map(_.futureValue).head should be(true)
       result.body.consume should equal("")
     }
 
     "LeafBuilder#build (not mandatory with failing fallback)" should "yield an empty body if the default and fallback async Actions fail" in {
-      val result = buildWithFallback(FunctionInfo(failedAsyncAction _), FunctionInfo(failedAsyncAction _), isMandatory = false)
+      val result = buildWithFallback(FunctionInfo(() => failedAsyncAction), FunctionInfo(() => failedAsyncAction), isMandatory = false)
       result.mandatoryFailedPagelets.map(_.futureValue).head should be(false)
       result.body.consume should equal("")
     }

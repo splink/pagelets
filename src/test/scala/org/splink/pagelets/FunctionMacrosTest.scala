@@ -20,7 +20,7 @@ class FunctionMacrosTest extends AnyFlatSpec with Matchers with StubControllerCo
   }
 
   "A function without parameters" should "not yield any types" in {
-    val result = signature(TestFunctions.f1 _)
+    val result = signature(() => TestFunctions.f1)
     result.types should be (empty)
   }
 
@@ -40,7 +40,7 @@ class FunctionMacrosTest extends AnyFlatSpec with Matchers with StubControllerCo
   }
 
   "A function literal" should "not yield any type info, because it is impossible to determine it's parameter name(s)" in {
-    val result = signature(TestFunctions.f5 _)
+    val result = signature(() => TestFunctions.f5)
     result.types should be (empty)
   }
 }

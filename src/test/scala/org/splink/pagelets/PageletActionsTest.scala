@@ -32,7 +32,7 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockFact
     override val resources: ResourceProvider = mock[ResourceProvider]
     (resources.update(_: Seq[Resource])(_: Environment)).expects(*, *).
       returning(Some(Fingerprint("print"))).
-      anyNumberOfTimes
+      anyNumberOfTimes()
   }
 
   def leaf = Leaf(Symbol("id"), null)
@@ -74,7 +74,8 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockFact
 
       val result = action(request)
       status(result) must equal(NOT_FOUND)
-      contentAsString(result) must equal("'one does not exist")
+      contentAsString(result) must include("one")
+      contentAsString(result) must include("does not exist")
     }
 
     "redirect if a pagelet declared as mandatory fails" in {

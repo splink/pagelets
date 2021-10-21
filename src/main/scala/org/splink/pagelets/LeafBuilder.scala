@@ -46,7 +46,7 @@ trait LeafBuilderImpl extends LeafBuilder {
           if (leaf.isMandatory) Action(Results.InternalServerError) else Action(Results.Ok)
 
         def fallbackFnc =
-          leaf.fallback.getOrElse(FunctionInfo(lastFallback _, Nil))
+          leaf.fallback.getOrElse(FunctionInfo(() => lastFallback, Nil))
 
         def fallbackAction = actionService.execute(leaf.id, fallbackFnc, args).fold(t => {
           log.warn(s"$requestId TypeException in $mandatory pagelet fallback ${leaf.id} '${messageFor(t)}'")
