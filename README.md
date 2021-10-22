@@ -37,20 +37,20 @@ To get the idea how Pagelets look in code, read on and check out the [play pagel
 
 Add the following lines to your build.sbt file:
 
+#### Play 2.8 (Scala 2.12 | Scala 2.13)
+~~~scala
+libraryDependencies += "org.splink" %% "pagelets" % "0.0.10
+~~~
 
-##### Play 2.5 (Scala 2.11)
+##### For older Play/Scala versions:
+###### Play 2.5 (Scala 2.11)
 ~~~scala
 libraryDependencies += "org.splink" %% "pagelets" % "0.0.3
 ~~~
 
-##### Play 2.6 (Scala 2.11 | Scala 2.12)
+###### Play 2.6 (Scala 2.11 | Scala 2.12)
 ~~~scala
 libraryDependencies += "org.splink" %% "pagelets" % "0.0.8
-~~~
-
-##### Play 2.8 (Scala 2.12 | Scala 2.13)
-~~~scala
-libraryDependencies += "org.splink" %% "pagelets" % "0.0.9
 ~~~
 
 ~~~scala
@@ -144,16 +144,16 @@ def pagelet(name: String)() = Action {
 Define the page composition:
 ~~~scala
 def tree(r: RequestHeader) = {
-  val tree = Tree('root, Seq(
-    Leaf('header, pagelet("header") _).withJavascript(Javascript("header.min.js")).setMandatory(true),
-    Tree('content, Seq(
-      Leaf('carousel, pagelet("carousel") _).withFallback(pagelet("Carousel") _).withCss(Css("carousel.min.css")),
-      Leaf('text, pagelet("text") _).withFallback(pagelet("Text") _)
+  val tree = Tree("root".id, Seq(
+    Leaf("header".id, pagelet("header") _).withJavascript(Javascript("header.min.js")).setMandatory(true),
+    Tree("content".id, Seq(
+      Leaf("carousel".id, pagelet("carousel") _).withFallback(pagelet("Carousel") _).withCss(Css("carousel.min.css")),
+      Leaf("text".id, pagelet("text") _).withFallback(pagelet("Text") _)
     )),
-    Leaf('footer, pagelet("footer") _).withCss(Css("footer.min.css"))
+    Leaf("footer".id, pagelet("footer") _).withCss(Css("footer.min.css"))
   ))
   
-  if(messagesApi.preferred(r).lang.language == "de") tree.skip('carousel) else tree
+  if(messagesApi.preferred(r).lang.language == "de") tree.skip("carousel".id) else tree
 }
 ~~~
 There are 2 different kinds of pagelets: Leaf pagelets and Tree pagelets. A Leaf pagelet references an actual Action, while

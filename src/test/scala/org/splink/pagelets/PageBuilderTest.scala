@@ -22,11 +22,11 @@ class PageBuilderTest extends AnyFlatSpec with Matchers with FutureHelper  with 
 
   def action(s: String) = () => Action(Results.Ok(s))
 
-  val tree = Tree(Symbol("root"), Seq(
-    Leaf(Symbol("one"), action("one")),
-    Tree(Symbol("two"), Seq(
-      Leaf(Symbol("three"), action("three")),
-      Leaf(Symbol("four"), action("four"))
+  val tree = Tree(PageletId("root"), Seq(
+    Leaf(PageletId("one"), action("one")),
+    Tree(PageletId("two"), Seq(
+      Leaf(PageletId("three"), action("three")),
+      Leaf(PageletId("four"), action("four"))
     ))
   ))
 
@@ -48,10 +48,10 @@ class PageBuilderTest extends AnyFlatSpec with Matchers with FutureHelper  with 
   }
 
   it should "build a subtree" in {
-    builder.build(opsify(tree).find(Symbol("two")).get).body.consume should equal("threefour")
+    builder.build(opsify(tree).find(PageletId("two")).get).body.consume should equal("threefour")
   }
 
   it should "build a leaf" in {
-    builder.build(opsify(tree).find(Symbol("four")).get).body.consume should equal("four")
+    builder.build(opsify(tree).find(PageletId("four")).get).body.consume should equal("four")
   }
 }

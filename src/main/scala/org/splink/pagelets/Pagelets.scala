@@ -15,4 +15,8 @@ trait Pagelets
   implicit def materialize[T]: Fnc[T] = macro FunctionMacros.materializeImpl[T]
 
   implicit def signature[T](f: T)(implicit fnc: Fnc[T]): FunctionInfo[T] = macro FunctionMacros.signatureImpl[T]
+
+  implicit class PageletIdOps(s: String) {
+    def id: PageletId = PageletId(s)
+  }
 }

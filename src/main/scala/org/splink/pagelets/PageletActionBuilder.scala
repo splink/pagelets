@@ -8,7 +8,7 @@ trait PageletActionBuilder {
   def actionService: ActionService
 
   trait ActionService {
-    def execute(id: Symbol, fi: FunctionInfo[_], args: Seq[Arg]): Either[PageletException, Action[AnyContent]]
+    def execute(id: PageletId, fi: FunctionInfo[_], args: Seq[Arg]): Either[PageletException, Action[AnyContent]]
   }
 
 }
@@ -21,7 +21,7 @@ trait PageletActionBuilderImpl extends PageletActionBuilder {
 
     case class ArgError(msg: String)
 
-    override def execute(id: Symbol, fi: FunctionInfo[_], args: Seq[Arg]): Either[PageletException, Action[AnyContent]] =
+    override def execute(id: PageletId, fi: FunctionInfo[_], args: Seq[Arg]): Either[PageletException, Action[AnyContent]] =
       values(fi, args).fold(
         err => Left(TypeException(s"$id: ${err.msg}")), {
           case Nil =>

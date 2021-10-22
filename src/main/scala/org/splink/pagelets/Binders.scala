@@ -4,15 +4,15 @@ import play.api.mvc.PathBindable
 
 object Binders {
 
-  implicit object PathBindableSymbol extends PathBindable[Symbol] {
+  implicit object PathBindablePageletId extends PathBindable[PageletId] {
     def bind(key: String, value: String) = try {
-      Right(Symbol(value))
+      Right(PageletId(value))
     } catch {
       case _: Throwable =>
-        Left(s"Can't create a Symbol from '$key'")
+        Left(s"Can't create a PageletId from '$key'")
     }
 
-    def unbind(key: String, value: Symbol): String = value.name
+    def unbind(key: String, value: PageletId): String = value.name
   }
 
 }

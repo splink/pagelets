@@ -11,7 +11,7 @@ object PageletResult {
   val empty = PageletResult(Source.empty[ByteString])
 }
 
-case class FailedPagelet(id: Symbol, t: Throwable)
+case class FailedPagelet(id: PageletId, t: Throwable)
 
 case class PageletResult(body: Source[ByteString, _],
                          js: Seq[Javascript] = Seq.empty,

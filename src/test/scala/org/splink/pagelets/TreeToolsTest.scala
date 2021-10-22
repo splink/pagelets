@@ -19,11 +19,11 @@ class TreeToolsTest extends AnyFlatSpec with Matchers with FutureHelper with Stu
   val action = () => Action(Results.Ok("action"))
 
   def treeOps = opsify(Tree(
-    Symbol("root"), Seq(
-      Leaf(Symbol("child1"), action),
-      Leaf(Symbol("child2"), action),
-      Tree(Symbol("child3"), Seq(
-        Leaf(Symbol("child31"), action)
+    PageletId("root"), Seq(
+      Leaf(PageletId("child1"), action),
+      Leaf(PageletId("child2"), action),
+      Tree(PageletId("child3"), Seq(
+        Leaf(PageletId("child31"), action)
       ))
     )
   ))
@@ -33,32 +33,32 @@ class TreeToolsTest extends AnyFlatSpec with Matchers with FutureHelper with Stu
   }.treeOps(t)
 
   "TreeTools#find" should "find a Leaf in the tree" in {
-    treeOps.find(Symbol("child31")) should equal(
+    treeOps.find(PageletId("child31")) should equal(
       Some(
-          Leaf(Symbol("child31"), action)
+          Leaf(PageletId("child31"), action)
       )
     )
   }
 
   it should "find a Tree in the tree" in {
-    treeOps.find(Symbol("child3")) should equal(
+    treeOps.find(PageletId("child3")) should equal(
       Some(
-        Tree(Symbol("child3"), Seq(
-          Leaf(Symbol("child31"), action)
+        Tree(PageletId("child3"), Seq(
+          Leaf(PageletId("child31"), action)
         ))
       )
     )
   }
 
   it should "find the root of the tree" in {
-    treeOps.find(Symbol("root")) should equal(
+    treeOps.find(PageletId("root")) should equal(
       Some(
         Tree(
-          Symbol("root"), Seq(
-            Leaf(Symbol("child1"), action),
-            Leaf(Symbol("child2"), action),
-            Tree(Symbol("child3"), Seq(
-              Leaf(Symbol("child31"), action)
+          PageletId("root"), Seq(
+            Leaf(PageletId("child1"), action),
+            Leaf(PageletId("child2"), action),
+            Tree(PageletId("child3"), Seq(
+              Leaf(PageletId("child31"), action)
             ))
           )
         )
@@ -73,45 +73,45 @@ class TreeToolsTest extends AnyFlatSpec with Matchers with FutureHelper with Stu
       body
     }
 
-    def actionFor(t: Tree)(id: Symbol) = opsify(t).find(id).map { part =>
+    def actionFor(t: Tree)(id: PageletId) = opsify(t).find(id).map { part =>
       part.asInstanceOf[Leaf[_, _]].info.fnc.asInstanceOf[() => Action[AnyContent]]()
     }
 
-    val newTree = treeOps.skip(Symbol("child3"))
-    val body = actionFor(newTree)(Symbol("child3")).map(bodyOf)
+    val newTree = treeOps.skip(PageletId("child3"))
+    val body = actionFor(newTree)(PageletId("child3")).map(bodyOf)
 
     body should equal(Some(""))
   }
 
   "TreeTools#replace" should "replace the part with the given id with another Tree" in {
-    val newTree = treeOps.replace(Symbol("child3"), Tree(Symbol("new"), Seq(
-      Leaf(Symbol("newChild1"), action),
-      Leaf(Symbol("newChild2"), action)
+    val newTree = treeOps.replace(PageletId("child3"), Tree(PageletId("new"), Seq(
+      Leaf(PageletId("newChild1"), action),
+      Leaf(PageletId("newChild2"), action)
     )))
 
-    opsify(newTree).find(Symbol("new")) should equal(
+    opsify(newTree).find(PageletId("new")) should equal(
       Some(
-        Tree(Symbol("new"), Seq(
-          Leaf(Symbol("newChild1"), action),
-          Leaf(Symbol("newChild2"), action)
+        Tree(PageletId("new"), Seq(
+          Leaf(PageletId("newChild1"), action),
+          Leaf(PageletId("newChild2"), action)
         ))
       )
     )
   }
 
   it should "replace the root with a different Tree" in {
-    val newTree = treeOps.replace(Symbol("root"), Tree(Symbol("new"), Seq(
-      Leaf(Symbol("newChild1"), action),
-      Leaf(Symbol("newChild2"), action)
+    val newTree = treeOps.replace(PageletId("root"), Tree(PageletId("new"), Seq(
+      Leaf(PageletId("newChild1"), action),
+      Leaf(PageletId("newChild2"), action)
     )))
 
-    opsify(newTree).find(Symbol("root")) shouldBe None
+    opsify(newTree).find(PageletId("root")) shouldBe None
 
-    opsify(newTree).find(Symbol("new")) should equal(
+    opsify(newTree).find(PageletId("new")) should equal(
       Some(
-        Tree(Symbol("new"), Seq(
-          Leaf(Symbol("newChild1"), action),
-          Leaf(Symbol("newChild2"), action)
+        Tree(PageletId("new"), Seq(
+          Leaf(PageletId("newChild1"), action),
+          Leaf(PageletId("newChild2"), action)
         ))
       )
     )
@@ -120,18 +120,18 @@ class TreeToolsTest extends AnyFlatSpec with Matchers with FutureHelper with Stu
   it should "return a Tree with one Leaf when asked to replace the root with a Leaf" in {
     // root must be a Tree, only then one can chain TreeTools function like tree.replace(...).skip(..).replace(
     val fnc = () => "someFunction"
-    val newTree = treeOps.replace(Symbol("root"), Leaf(Symbol("new"), FunctionInfo(fnc, Nil)))
+    val newTree = treeOps.replace(PageletId("root"), Leaf(PageletId("new"), FunctionInfo(fnc, Nil)))
 
-    opsify(newTree).find(Symbol("new")) should equal(
+    opsify(newTree).find(PageletId("new")) should equal(
       Some(
-        Leaf(Symbol("new"), FunctionInfo(fnc, Nil)
+        Leaf(PageletId("new"), FunctionInfo(fnc, Nil)
         ))
     )
 
-    opsify(newTree).find(Symbol("root")) should equal(
+    opsify(newTree).find(PageletId("root")) should equal(
       Some(
-        Tree(Symbol("root"), Seq(
-          Leaf(Symbol("new"), FunctionInfo(fnc, Nil))
+        Tree(PageletId("root"), Seq(
+          Leaf(PageletId("new"), FunctionInfo(fnc, Nil))
         ))
       )
     )

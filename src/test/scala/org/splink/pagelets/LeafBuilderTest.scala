@@ -42,10 +42,10 @@ class LeafBuilderTest extends AnyFlatSpec with Matchers with FutureHelper with S
   val requestId = RequestId("RequestId")
 
   def build[T](info: FunctionInfo[T], isMandatory: Boolean): PageletResult =
-    builder.leafBuilderService.build(Leaf(Symbol("one"), info, isMandatory = isMandatory), Seq.empty, requestId)
+    builder.leafBuilderService.build(Leaf(PageletId("one"), info, isMandatory = isMandatory), Seq.empty, requestId)
 
   def buildWithFallback[T, U](info: FunctionInfo[T], fallback: FunctionInfo[U], isMandatory: Boolean): PageletResult =
-    builder.leafBuilderService.build(Leaf(Symbol("one"), info, isMandatory = isMandatory).withFallback(fallback), Seq.empty, requestId)
+    builder.leafBuilderService.build(Leaf(PageletId("one"), info, isMandatory = isMandatory).withFallback(fallback), Seq.empty, requestId)
 
   /**
     * Without fallback

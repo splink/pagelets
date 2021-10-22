@@ -35,8 +35,8 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockFact
       anyNumberOfTimes()
   }
 
-  def leaf = Leaf(Symbol("id"), null)
-  def tree(r: RequestHeader) = Tree(Symbol("id"), Seq.empty)
+  def leaf = Leaf(PageletId("id"), null)
+  def tree(r: RequestHeader) = Tree(PageletId("id"), Seq.empty)
   def title(r: RequestHeader) = "Title"
 
   def mkResult(body: String) = PageletResult(Source.single(ByteString(body)))
@@ -49,11 +49,11 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockFact
   "PageletAction" should {
     "return a Pagelet if the tree contains the pagelet for the given id" in {
       val a = actions
-      (a.opsMock.find _).expects(Symbol("one")).returning(Some(leaf))
+      (a.opsMock.find _).expects(PageletId("one")).returning(Some(leaf))
 
       buildMock(a.builder)(mkResult("body"))
 
-      val action = a.PageletAction.async(onError)(tree, Symbol("one")) { (_, page) =>
+      val action = a.PageletAction.async(onError)(tree, PageletId("one")) { (_, page) =>
         Html(s"${page.body}")
       }
 
@@ -65,10 +65,10 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockFact
 
     "return NotFound if the tree does not contain a pagelet for the given id" in {
       val a = actions
-      (a.opsMock.find _).expects(Symbol("one")).returning(None)
+      (a.opsMock.find _).expects(PageletId("one")).returning(None)
       buildMock(a.builder)(mkResult("body"))
 
-      val action = a.PageletAction.async(onError)(tree, Symbol("one")) { (_, page) =>
+      val action = a.PageletAction.async(onError)(tree, PageletId("one")) { (_, page) =>
         Html(s"${page.body}")
       }
 
@@ -80,10 +80,10 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockFact
 
     "redirect if a pagelet declared as mandatory fails" in {
       val a = actions
-      (a.opsMock.find _).expects(Symbol("one")).returning(Some(leaf))
+      (a.opsMock.find _).expects(PageletId("one")).returning(Some(leaf))
       buildMock(a.builder)(mkResult("").copy(mandatoryFailedPagelets = Seq(Future.successful(true))))
 
-      val action = a.PageletAction.async(onError)(tree, Symbol("one")) { (_, page) =>
+      val action = a.PageletAction.async(onError)(tree, PageletId("one")) { (_, page) =>
         Html(s"${page.body}")
       }
 

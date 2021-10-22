@@ -37,7 +37,7 @@ trait PageletActions {
   }
 
   trait PageletActions {
-    def async[T: Writeable](onError: => Call)(tree: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
+    def async[T: Writeable](onError: => Call)(tree: RequestHeader => Tree, id: PageletId)(template: (Request[_], Page) => T)(
                              implicit m: Materializer, env: Environment): Action[AnyContent]
   }
 
@@ -127,7 +127,7 @@ trait PageletActionsImpl extends PageletActions {
 
   override val PageletAction = new PageletActions {
     override def async[T: Writeable](onError: => Call)(
-      tree: RequestHeader => Tree, id: Symbol)(template: (Request[_], Page) => T)(
+      tree: RequestHeader => Tree, id: PageletId)(template: (Request[_], Page) => T)(
                                       implicit m: Materializer, env: Environment) = Action.async { request =>
       tree(request).find(id).map { p =>
         val args = request.queryString.map { case (key, values) =>

@@ -29,7 +29,7 @@ class PageletActionBuilderTest extends AnyFlatSpec with Matchers with FutureHelp
 
     val args = Seq(Arg("s", "Hello!"))
 
-    val action = tools.actionService.execute(Symbol("someId"), info, args).toOption.get
+    val action = tools.actionService.execute(PageletId("someId"), info, args).toOption.get
     contentAsString(action(request)) should equal("Hello!")
   }
 
@@ -41,7 +41,7 @@ class PageletActionBuilderTest extends AnyFlatSpec with Matchers with FutureHelp
 
     val args = Seq(Arg("o", Some("optional")))
 
-    val action = tools.actionService.execute(Symbol("someId"), info, args).toOption.get
+    val action = tools.actionService.execute(PageletId("someId"), info, args).toOption.get
     contentAsString(action(request)) should equal("Some(optional)")
   }
 
@@ -53,7 +53,7 @@ class PageletActionBuilderTest extends AnyFlatSpec with Matchers with FutureHelp
 
     val args = Seq(Arg("i", 1), Arg("o", Some("optional")), Arg("custom", Test2("custom")))
 
-    val action = tools.actionService.execute(Symbol("someId"), info, args).toOption.get
+    val action = tools.actionService.execute(PageletId("someId"), info, args).toOption.get
     contentAsString(action(request)) should equal("1Some(optional)Test2(custom)")
   }
 
@@ -63,7 +63,7 @@ class PageletActionBuilderTest extends AnyFlatSpec with Matchers with FutureHelp
 
     val info = FunctionInfo(fnc _, ("s", "java.lang.String") :: Nil)
 
-    val result = tools.actionService.execute(Symbol("someId"), info, Seq.empty).swap.toOption.get
+    val result = tools.actionService.execute(PageletId("someId"), info, Seq.empty).swap.toOption.get
 
     result shouldBe a[TypeException]
     result.getMessage should include("someId")
@@ -91,7 +91,7 @@ class PageletActionBuilderTest extends AnyFlatSpec with Matchers with FutureHelp
     val args = Seq(Arg("s0", "s0"), Arg("s1", "s1"), Arg("s2", "s2"), Arg("s3", "s3"), Arg("s4", "s4"),
       Arg("s5", "s5"), Arg("s6", "s6"), Arg("s7", "s7"), Arg("s8", "s8"), Arg("s9", "s9"), Arg("s10", "s10"))
 
-    val result = tools.actionService.execute(Symbol("someId"), info, args).swap.toOption.get
+    val result = tools.actionService.execute(PageletId("someId"), info, args).swap.toOption.get
 
     result shouldBe a[TypeException]
     result.getMessage should include("someId")
@@ -195,9 +195,9 @@ class PageletActionBuilderTest extends AnyFlatSpec with Matchers with FutureHelp
     name should equal("scala.Char")
   }
 
-  it should "return the classname for Symbol" in {
-    val name = actionService.scalaClassNameFor(Symbol("someSymbol"))
-    name should equal("scala.Symbol")
+  it should "return the classname for PageletId" in {
+    val name = actionService.scalaClassNameFor(PageletId("someId"))
+    name should equal("org.splink.pagelets.PageletId")
   }
 
   it should "return 'undefined' for any local class without a canonical name" in {

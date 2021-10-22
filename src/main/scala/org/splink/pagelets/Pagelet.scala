@@ -4,11 +4,12 @@ import akka.stream.scaladsl.{Concat, Source}
 
 case class Arg(name: String, value: Any)
 
+
 sealed trait Pagelet {
-  def id: Symbol
+  def id: PageletId
 }
 
-case class Leaf[A, B] private(id: Symbol, info: FunctionInfo[A],
+case class Leaf[A, B] private(id: PageletId, info: FunctionInfo[A],
                               fallback: Option[FunctionInfo[B]] = None,
                               css: Seq[Css] = Seq.empty,
                               javascript: Seq[Javascript] = Seq.empty,
@@ -39,7 +40,7 @@ object Tree {
     }
 }
 
-case class Tree private(id: Symbol, children: Seq[Pagelet],
+case class Tree private(id: PageletId, children: Seq[Pagelet],
                         combine: Seq[PageletResult] => PageletResult = Tree.combine) extends Pagelet {
 
   override def equals(that: Any): Boolean =

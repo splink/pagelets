@@ -14,11 +14,11 @@ class VisualizerTest extends AnyFlatSpec with Matchers with StubControllerCompon
   def action(s: String) = () => Action(Results.Ok(s))
   def action2(s: String, i: Int) = Action(Results.Ok(s + i))
 
-  val tree = Tree(Symbol("root"), Seq(
-    Leaf(Symbol("one"), action("one")),
-    Tree(Symbol("two"), Seq(
-      Leaf(Symbol("three"), action2 _),
-      Leaf(Symbol("four"), action("four"))
+  val tree = Tree(PageletId("root"), Seq(
+    Leaf(PageletId("one"), action("one")),
+    Tree(PageletId("two"), Seq(
+      Leaf(PageletId("three"), action2 _),
+      Leaf(PageletId("four"), action("four"))
     ))
   ))
 
