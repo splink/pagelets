@@ -136,4 +136,43 @@ class TreeToolsTest extends AnyFlatSpec with Matchers with FutureHelper with Stu
       )
     )
   }
+
+  "TreeTools#filter" should "filter all pagelets and their children for the given ids" in {
+    treeOps.filter(_.id != PageletId("child3")) should equal(
+      Tree(PageletId("root"), Seq(
+        Leaf(PageletId("child1"), action),
+        Leaf(PageletId("child2"), action)
+      ))
+    )
+  }
+
+ it should "filter a single pagelet leaf for the given id" in {
+    treeOps.filter(_.id != PageletId("child2")) should equal(
+      Tree(PageletId("root"), Seq(
+        Leaf(PageletId("child1"), action),
+        Tree(PageletId("child3"), Seq(
+          Leaf(PageletId("child31"), action)
+        ))
+      ))
+    )
+  }
+
+  it should "not filter the root node" in {
+    treeOps.filter(_.id != PageletId("root")) should equal(
+      Tree(PageletId("root"), Seq(
+        Leaf(PageletId("child1"), action),
+        Leaf(PageletId("child2"), action),
+        Tree(PageletId("child3"), Seq(
+          Leaf(PageletId("child31"), action)
+        ))
+      ))
+    )
+  }
+
+  it should "filter multiple nodes" in {
+    treeOps.filter(!_.id.name.startsWith("child")) should equal(
+      Tree(PageletId("root"), Seq.empty)
+    )
+  }
+
 }
