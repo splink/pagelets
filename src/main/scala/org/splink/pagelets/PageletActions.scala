@@ -46,8 +46,9 @@ trait PageletActions {
 trait PageletActionsImpl extends PageletActions {
   self: BaseController with PageBuilder with TreeTools with Resources =>
 
-  override val PageAction = new PageActions {
+  override val PageAction = new PageActions  {
     val log = Logger("PageletActions")
+
     implicit val ec: ExecutionContext = defaultExecutionContext
 
     override def async[T: Writeable](onError: => Call)(title: RequestHeader => String, tree: RequestHeader => Pagelet, args: Arg*)(template: (Request[_], Page) => T)(
@@ -56,13 +57,26 @@ trait PageletActionsImpl extends PageletActions {
 
       (for {
         page <- mkPage(title(request), result)
-        cookies <- Future.sequence(result.cookies)
+        res <- Future.sequence(result.results)
         mandatoryPageletFailed <- Future.sequence(result.mandatoryFailedPagelets)
       } yield {
-        if(mandatoryPageletFailed.forall(!_))
-          Ok(template(request, page)).withCookies(cookies.flatten.distinct: _*)
-        else
+        if(mandatoryPageletFailed.forall(!_)) {
+          val initial = (Option.empty[Flash], Option.empty[Session], Seq.empty[Cookie])
+          val (maybeFlash, maybeSession, cookies) = res.foldLeft(initial) { case ((flash, session, cookies), next) =>
+           (flash.orElse(next._1), session.orElse(next._2), (cookies ++ next._3).distinct)
+          }
+
+          val nakedResult = Ok(template(request, page))
+          (for {
+            r1 <- maybeFlash.map(nakedResult.flashing).orElse(Some(nakedResult))
+            r2 <- maybeSession.map(r1.withSession).orElse(Some(r1))
+            r3 <- Some(if(cookies.nonEmpty) r2.withCookies(cookies:_*) else r2)
+          } yield r3)
+            .getOrElse(nakedResult).bakeCookies()
+
+        } else {
           Redirect(onError, TEMPORARY_REDIRECT)
+        }
 
       }).recover {
         case e: Throwable =>
@@ -111,7 +125,7 @@ trait PageletActionsImpl extends PageletActions {
               |}</script>""".stripMargin) else ByteString.empty
       }
 
-      val cookies = Future.sequence(result.cookies).map(cookies => cookieJs(cookies.flatten))
+      val cookies = Future.sequence(result.results).map(cookies => cookieJs(cookies.flatMap(_._3)))
 
       Source.combine(result.body, Source.future(cookies))(Concat.apply).filter(_.nonEmpty)
     }

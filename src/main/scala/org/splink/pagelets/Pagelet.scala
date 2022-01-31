@@ -30,11 +30,11 @@ object Tree {
   def combine(results: Seq[PageletResult]): PageletResult =
     results.foldLeft(PageletResult.empty) { (acc, next) =>
       PageletResult(
-        Source.combine(acc.body, next.body)(Concat.apply),//TODO offer a choice of merge strategy
+        Source.combine(acc.body, next.body)(Concat.apply),
         acc.js ++ next.js,
         acc.jsTop ++ next.jsTop,
         acc.css ++ next.css,
-        acc.cookies ++ next.cookies,
+        acc.results ++ next.results,
         (acc.metaTags ++ next.metaTags).distinct,
         acc.mandatoryFailedPagelets ++ next.mandatoryFailedPagelets)
     }

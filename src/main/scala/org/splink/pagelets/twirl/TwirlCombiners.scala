@@ -5,7 +5,7 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import org.splink.pagelets._
 import play.api.Logger
-import play.api.mvc.Cookie
+import play.api.mvc.{Cookie, Flash, Session}
 import play.twirl.api.{Html, HtmlFormat}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -40,22 +40,22 @@ object TwirlCombiners {
   }
 
   private def combineAssets(results: Seq[PageletResult]): Source[ByteString, _] => PageletResult = {
-    val (js, jsTop, css, cookies, metaTags, failedPagelets) = results.foldLeft(
+    val (js, jsTop, css, res, metaTags, failedPagelets) = results.foldLeft(
       Seq.empty[Javascript],
       Seq.empty[Javascript],
       Seq.empty[Css],
-      Seq.empty[Future[Seq[Cookie]]],
+      Seq.empty[Future[(Option[Flash], Option[Session], Seq[Cookie])]],
       Seq.empty[MetaTag],
       Seq.empty[Future[Boolean]]) { (acc, next) =>
       (acc._1 ++ next.js,
         acc._2 ++ next.jsTop,
         acc._3 ++ next.css,
-        acc._4 ++ next.cookies,
+        acc._4 ++ next.results,
         (acc._5 ++ next.metaTags).distinct,
         acc._6 ++ next.mandatoryFailedPagelets)
     }
 
-    PageletResult(_, js, jsTop, css, cookies, metaTags, failedPagelets)
+    PageletResult(_, js, jsTop, css, res, metaTags, failedPagelets)
   }
 
   implicit def adapt[A, B](f: A => B): Seq[A] => B =

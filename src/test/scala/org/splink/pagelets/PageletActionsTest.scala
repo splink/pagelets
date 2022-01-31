@@ -120,6 +120,26 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockFact
       status(result) must equal(TEMPORARY_REDIRECT)
     }
 
+    "return the corresponding headers alongside the Page" in {
+      val a = actions
+      buildMock(a.builder)(
+        mkResult("body").copy(
+          results = Seq(
+            Future.successful((None, None, Seq(Cookie("name", "value")))),
+            Future.successful((None, None, Seq(Cookie("name1", "value"))))
+          )))
+
+      val action = a.PageAction.async(onError)(title, tree) { (request, page) =>
+        Html(s"${page.body}${title(request)}")
+      }
+
+      val result = action(request)
+
+      status(result) must equal(OK)
+      contentAsString(result) must equal("bodyTitle")
+      cookies(result) must contain theSameElementsAs(Cookies(Seq(Cookie("name", "value"), Cookie("name1", "value"))))
+    }
+
   }
 
   "PageAction#stream" should {
@@ -154,7 +174,7 @@ class PageletActionsTest extends PlaySpec with GuiceOneAppPerSuite with MockFact
       val a = actions
       buildMock(a.builder)(
         mkResult("body").copy(
-          cookies = Seq(Future.successful(Seq(Cookie("name", "value"))))))
+          results = Seq(Future.successful((None, None, Seq(Cookie("name", "value")))))))
 
       val action = a.PageAction.stream(title, tree) { (request, page) =>
         page.body.map(b => Html(b.utf8String + title(request)))
