@@ -33,7 +33,8 @@ class LeafBuilderTest extends AnyFlatSpec with Matchers with FutureHelper with S
 
   def mkResult(body: String) = PageletResult(
     body = Source.future(Future.successful(ByteString(body))),
-    cookies = Seq(Future(Seq.empty)))
+    results = Seq(Future((None, None, Seq.empty)))
+  )
 
   val builder = new LeafBuilderImpl with BaseController with PageletActionBuilderImpl {
     override def controllerComponents: ControllerComponents = stubControllerComponents()

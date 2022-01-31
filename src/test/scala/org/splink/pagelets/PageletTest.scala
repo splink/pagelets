@@ -6,7 +6,7 @@ import akka.util.ByteString
 import helpers.FutureHelper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.flatspec.AnyFlatSpec
-import play.api.mvc.Cookie
+import play.api.mvc.{Cookie, Flash, Session}
 
 import scala.concurrent.Future
 
@@ -96,7 +96,9 @@ class PageletTest extends AnyFlatSpec with Matchers with FutureHelper {
       Seq(Javascript("src.js")),
       Seq(Javascript("src-top.js")),
       Seq(Css("src.css")),
-      Seq(Future.successful(Seq(Cookie("name", "value")))),
+      Seq(Future.successful {
+        (Some(Flash(Map("f" -> "g"))), Some(Session(Map("a" -> "b", "a" -> "c"))), Seq(Cookie("name", "value")))
+      }),
       Seq(MetaTag("name", "content")),
       Seq(Future.successful(true)))
 
@@ -105,7 +107,9 @@ class PageletTest extends AnyFlatSpec with Matchers with FutureHelper {
       Seq(Javascript("src2.js")),
       Seq(Javascript("src2-top.js")),
       Seq(Css("src2.css")),
-      Seq(Future.successful(Seq(Cookie("name2", "value")))),
+      Seq(Future.successful {
+        (None, Some(Session(Map("a" -> "b1", "b" -> "c"))), Seq(Cookie("name2", "value")))
+      }),
       Seq(MetaTag("name2", "content")),
       Seq(Future.successful(false)))
 
@@ -113,7 +117,12 @@ class PageletTest extends AnyFlatSpec with Matchers with FutureHelper {
     result.js should equal(Seq(Javascript("src.js"), Javascript("src2.js")))
     result.jsTop should equal(Seq(Javascript("src-top.js"), Javascript("src2-top.js")))
     result.css should equal(Seq(Css("src.css"), Css("src2.css")))
-    result.cookies.map(_.futureValue) should equal(Seq(Seq(Cookie("name", "value")), Seq(Cookie("name2", "value"))))
+
+    result.results.map(_.futureValue) should equal {
+      Seq((Some(Flash(Map("f" -> "g"))), Some(Session(Map("a" -> "b", "a" -> "c"))), Seq(Cookie("name", "value"))),
+        (None, Some(Session(Map("a" -> "b1", "b" -> "c"))), Seq(Cookie("name2", "value"))))
+    }
+
     result.metaTags should equal(Seq(MetaTag("name", "content"), MetaTag("name2", "content")))
     result.mandatoryFailedPagelets.map(_.futureValue) should equal(Seq(true, false))
   }

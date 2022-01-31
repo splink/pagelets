@@ -1,7 +1,6 @@
 package org.splink.pagelets
 
 import akka.stream.scaladsl.Source
-import play.api.http.{CookiesConfiguration, HeaderNames}
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -13,16 +12,14 @@ trait LeafBuilder {
   trait LeafBuilderService {
     def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId)(implicit r: Request[AnyContent]): PageletResult
   }
-
 }
 
 trait LeafBuilderImpl extends LeafBuilder {
   self: PageletActionBuilder with BaseController =>
 
-  override val leafBuilderService = new LeafBuilderService with CookieHeaderEncoding {
+  override val leafBuilderService = new LeafBuilderService {
     val log = play.api.Logger("LeafBuilder").logger
     implicit val ec: ExecutionContext = defaultExecutionContext
-    val config: CookiesConfiguration = CookiesConfiguration()
 
     override def build(leaf: Leaf[_, _], args: Seq[Arg], requestId: RequestId)(implicit r: Request[AnyContent]) = {
       log.info(s"$requestId Invoke pagelet ${leaf.id}")
@@ -81,9 +78,8 @@ trait LeafBuilderImpl extends LeafBuilder {
           result.body.dataStream
         }).flatMapConcat(identity)
 
-        val cookies = eventualResult.map { result =>
-          result.header.headers.get(HeaderNames.SET_COOKIE).
-            map(decodeSetCookieHeader).getOrElse(Seq.empty)
+        val results = eventualResult.map { result =>
+          (result.newFlash, result.newSession, result.newCookies)
         }
 
         val hasMandatoryPageletFailed = Seq(eventualResult.map(_.header.status == Results.InternalServerError.header.status))
@@ -91,7 +87,8 @@ trait LeafBuilderImpl extends LeafBuilder {
         PageletResult(bodySource,
           leaf.javascript,
           leaf.javascriptTop,
-          leaf.css, Seq(cookies),
+          leaf.css,
+          Seq(results),
           leaf.metaTags,
           hasMandatoryPageletFailed
         )

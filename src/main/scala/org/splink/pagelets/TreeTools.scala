@@ -11,6 +11,7 @@ trait TreeTools {
     def skip(id: PageletId): Tree
     def replace(id: PageletId, other: Pagelet): Tree
     def find(id: PageletId): Option[Pagelet]
+    def filter(f: Pagelet => Boolean): Tree
   }
 }
 
@@ -60,5 +61,16 @@ trait TreeToolsImpl extends TreeTools { self: BaseController =>
         rec(tree).asInstanceOf[Tree]
       }
     }
+
+    def filter(f: Pagelet => Boolean): Tree = {
+      def rec(next: Pagelet): Pagelet = next match {
+        case t: Tree =>
+          t.copy(children = t.children.filter(f).map(rec))
+        case l: Leaf[_, _] => l
+      }
+
+      rec(tree).asInstanceOf[Tree]
+    }
+
   }
 }
