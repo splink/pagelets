@@ -39,7 +39,7 @@ Add the following lines to your build.sbt file:
 
 #### Play 2.8 (Scala 2.12 | Scala 2.13)
 ~~~scala
-libraryDependencies += "org.splink" %% "pagelets" % "0.0.10
+libraryDependencies += "org.splink" %% "pagelets" % "0.0.11
 ~~~
 
 ##### For older Play/Scala versions:
